@@ -97,14 +97,13 @@ void UserController::logout(const HttpRequestPtr& req, std::function<void(const 
 
 // ─── HealthController ─────────────────────────────────────────────────────────
 
-// check----------------------------------------------
-
-void HealthController::check(const HttpRequestPtr& /*req*/, std::function<void(const HttpResponsePtr&)>&& cb) {
+void HealthController::check(const HttpRequestPtr&, std::function<void(const HttpResponsePtr&)>&& cb) {
     cb(jsonResponse({
-        {"status",     "ok"},
-        {"tls",        "1.3"},
-        {"kem",        "ML-KEM-768 (Kyber768)"},
-        {"signature",  "ML-DSA-65 (Dilithium3)"},
-        {"encryption", "AES-256-GCM"}
+        {"status",          "ok"},
+        {"tls",             "1.3"},
+        {"key_exchange",    "X25519 + ML-KEM-768 (hybrid)"},
+        {"tls_auth",        "ECDSA P-256 (certificate)"},
+        {"token_signing",   "ML-DSA-65 (application layer)"},
+        {"encryption",      "AES-256-GCM"}
     }));
 }

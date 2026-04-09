@@ -18,9 +18,8 @@ DilithiumSigner::~DilithiumSigner() {
 }
 
 bool DilithiumSigner::generateKeyPair() {
-    EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new_from_name(
-        OQSProvider::getInstance().getLibCtx(), "mldsa65", nullptr);
-
+    // nullptr = use default library context (same as OQSProvider)
+    EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new_from_name(nullptr, "mldsa65", nullptr);
     if (!ctx) {
         std::cerr << "[DilithiumSigner] Failed to create EVP_PKEY_CTX for mldsa65\n";
         ERR_print_errors_fp(stderr);
@@ -41,12 +40,8 @@ bool DilithiumSigner::generateKeyPair() {
     }
 
     EVP_PKEY_CTX_free(ctx);
-
-    // Extract public key from the generated key pair
     private_key_ = pkey;
-
-    // Duplicate for public key usage
-    public_key_ = EVP_PKEY_dup(pkey);
+    public_key_  = EVP_PKEY_dup(pkey);
 
     std::cout << "[DilithiumSigner] ML-DSA-65 key pair generated\n";
     return true;
@@ -98,16 +93,14 @@ std::vector<uint8_t> DilithiumSigner::sign(const std::string& data) const {
     EVP_MD_CTX* md_ctx = EVP_MD_CTX_new();
     if (!md_ctx) throw std::runtime_error("[DilithiumSigner] EVP_MD_CTX_new failed");
 
-    // ML-DSA is a hash-then-sign scheme; nullptr digest means algorithm handles it
+    // nullptr for lib_ctx = use default context
     if (EVP_DigestSignInit_ex(md_ctx, nullptr, nullptr,
-                               OQSProvider::getInstance().getLibCtx(),
-                               nullptr, private_key_, nullptr) <= 0) {
+                               nullptr, nullptr, private_key_, nullptr) <= 0) {
         EVP_MD_CTX_free(md_ctx);
         ERR_print_errors_fp(stderr);
         throw std::runtime_error("[DilithiumSigner] DigestSignInit failed");
     }
 
-    // Get required signature size
     size_t sig_len = 0;
     if (EVP_DigestSign(md_ctx, nullptr, &sig_len,
                        reinterpret_cast<const uint8_t*>(data.data()),
@@ -140,8 +133,7 @@ bool DilithiumSigner::verify(const std::string& data,
     if (!md_ctx) return false;
 
     if (EVP_DigestVerifyInit_ex(md_ctx, nullptr, nullptr,
-                                 OQSProvider::getInstance().getLibCtx(),
-                                 nullptr, public_key_, nullptr) <= 0) {
+                                 nullptr, nullptr, public_key_, nullptr) <= 0) {
         EVP_MD_CTX_free(md_ctx);
         return false;
     }
@@ -165,7 +157,6 @@ std::string DilithiumSigner::exportPublicKeyPEM() const {
 
 std::string DilithiumSigner::exportKeyPEM(EVP_PKEY* key, bool is_private) const {
     if (!key) return {};
-
     BIO* bio = BIO_new(BIO_s_mem());
     if (!bio) return {};
 

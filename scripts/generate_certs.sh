@@ -1,117 +1,103 @@
 #!/usr/bin/env bash
-# generate_certs.sh
+# generate_certs.sh — Hybrid PQC TLS 1.3
 # ─────────────────────────────────────────────────────────────────────────────
-# Generates a full ML-DSA-65 (Dilithium3) CA + server certificate chain
-# using the OQS provider. Run this ONCE before docker-compose up.
+# Generates an ECDSA P-256 CA + server certificate chain.
+# The certificate uses classical ECDSA (fully supported by OpenSSL 3.0).
+# The PQC guarantee comes from X25519+ML-KEM-768 hybrid key exchange at
+# runtime — the cert just needs to be valid, not PQC-signed.
 #
-# Prerequisites:
-#   - OpenSSL 3.x installed
-#   - oqs-provider built and on the provider path
-#     (or set OPENSSL_MODULES to its directory)
-#
-# Usage:
+# Usage (from project root):
+#   chmod +x scripts/generate_certs.sh
 #   ./scripts/generate_certs.sh
 # ─────────────────────────────────────────────────────────────────────────────
 
 set -euo pipefail
 
 CERTS_DIR="$(pwd)/certs"
-ALGO="mldsa65"                    # ML-DSA-65 = Dilithium3 NIST standard name
 DAYS=365
-PROVIDER_FLAG="-provider oqsprovider -provider default"
 
 mkdir -p "$CERTS_DIR"
 cd "$CERTS_DIR"
 
-echo "════════════════════════════════════════"
-echo "  Generating ML-DSA-65 Certificate Chain"
-echo "  Algorithm : $ALGO"
-echo "  Output    : $CERTS_DIR"
-echo "════════════════════════════════════════"
+echo "════════════════════════════════════════════"
+echo "  Hybrid PQC TLS — Certificate Generation"
+echo "  CA + Server: ECDSA P-256"
+echo "  Key Exchange: X25519 + ML-KEM-768 (runtime)"
+echo "════════════════════════════════════════════"
 
-# ── 1. Generate CA key and self-signed root certificate ──────────────────────
+# ── 1. CA private key (ECDSA P-256) ──────────────────────────────────────────
 echo ""
-echo "[1/4] Generating CA key and root certificate..."
-openssl req $PROVIDER_FLAG \
-    -x509 -new \
-    -newkey "$ALGO" \
-    -keyout ca.key \
-    -out    ca.crt \
-    -nodes \
-    -subj   "/CN=PQC-TLS CA/O=PQC API/C=US" \
-    -days   "$DAYS"
+echo "[1/5] Generating CA private key (ECDSA P-256)..."
+openssl ecparam -name prime256v1 -genkey -noout -out ca.key
+echo "      ✓ ca.key"
 
-echo "      ✓ ca.key and ca.crt generated"
-
-# ── 2. Generate server private key ───────────────────────────────────────────
+# ── 2. Self-signed CA certificate ────────────────────────────────────────────
 echo ""
-echo "[2/4] Generating server private key..."
-openssl genpkey $PROVIDER_FLAG \
-    -algorithm "$ALGO" \
-    -out server.key
+echo "[2/5] Generating CA certificate..."
+openssl req -new -x509 \
+    -key ca.key \
+    -out ca.crt \
+    -days "$DAYS" \
+    -subj "/CN=PQC-TLS CA/O=PQC API/C=US"
+echo "      ✓ ca.crt"
 
-echo "      ✓ server.key generated"
-
-# ── 3. Generate certificate signing request ──────────────────────────────────
+# ── 3. Server private key (ECDSA P-256) ──────────────────────────────────────
 echo ""
-echo "[3/4] Generating server CSR..."
-openssl req $PROVIDER_FLAG \
-    -new \
-    -key    server.key \
-    -out    server.csr \
-    -subj   "/CN=localhost/O=PQC API Server/C=US"
+echo "[3/5] Generating server private key..."
+openssl ecparam -name prime256v1 -genkey -noout -out server.key
+echo "      ✓ server.key"
 
-echo "      ✓ server.csr generated"
-
-# ── 4. Sign server cert with CA ───────────────────────────────────────────────
+# ── 4. Server CSR + sign ──────────────────────────────────────────────────────
 echo ""
-echo "[4/4] Signing server certificate with CA..."
-openssl x509 $PROVIDER_FLAG \
-    -req \
-    -in         server.csr \
-    -CA         ca.crt \
-    -CAkey      ca.key \
+echo "[4/5] Generating and signing server certificate..."
+openssl req -new \
+    -key server.key \
+    -out server.csr \
+    -subj "/CN=localhost/O=PQC API Server/C=US"
+
+# Create OCSP extension config
+cat > ocsp_ext.cnf << EOF
+authorityInfoAccess = OCSP;URI:http://localhost:8080
+EOF
+
+openssl x509 -req \
+    -in server.csr \
+    -CA ca.crt \
+    -CAkey ca.key \
     -CAcreateserial \
-    -out        server.crt \
-    -days       "$DAYS"
+    -out server.crt \
+    -days "$DAYS" \
+    -sha256 \
+    -extfile ocsp_ext.cnf
+echo "      ✓ server.crt"
 
-echo "      ✓ server.crt signed by CA"
-
-# ── Create OCSP index file (required by openssl ocsp responder) ───────────────
+# ── 5. OCSP index ─────────────────────────────────────────────────────────────
 echo ""
-echo "[+] Creating OCSP index file..."
-# Format: V/R <tab> expiry <tab> serial <tab> unknown <tab> subject
+echo "[5/5] Creating OCSP index..."
 SERIAL=$(openssl x509 -in server.crt -noout -serial | cut -d= -f2)
-EXPIRY=$(openssl x509 -in server.crt -noout -enddate | cut -d= -f2 | \
-         date -f - +"%y%m%d%H%M%SZ" 2>/dev/null || \
-         openssl x509 -in server.crt -noout -enddate | cut -d= -f2)
-
+EXPIRY=$(openssl x509 -in server.crt -noout -enddate | cut -d= -f2)
 printf "V\t%s\t\t%s\tunknown\t/CN=localhost/O=PQC API Server/C=US\n" \
-       "$EXPIRY" "$SERIAL" > index.txt
+    "$EXPIRY" "$SERIAL" > index.txt
+echo "      ✓ index.txt"
 
-echo "      ✓ index.txt created"
+# ── Verify ────────────────────────────────────────────────────────────────────
+echo ""
+echo "[+] Verifying chain..."
+openssl verify -CAfile ca.crt server.crt && echo "      ✓ Chain OK"
 
-# ── Verify the chain ──────────────────────────────────────────────────────────
-echo ""
-echo "[+] Verifying certificate chain..."
-openssl verify $PROVIDER_FLAG -CAfile ca.crt server.crt && \
-    echo "      ✓ Chain verification PASSED" || \
-    echo "      ✗ Chain verification FAILED"
+# Cleanup
+rm -f server.csr ca.srl ocsp_ext.cnf
 
-# ── Summary ───────────────────────────────────────────────────────────────────
 echo ""
-echo "════════════════════════════════════════"
-echo "  Generated files in $CERTS_DIR:"
+echo "════════════════════════════════════════════"
+echo "  Files in $CERTS_DIR:"
+echo "  ca.key      ← keep secret, offline only"
+echo "  ca.crt      ← loaded by server + OCSP"
+echo "  server.key  ← loaded by Drogon"
+echo "  server.crt  ← loaded by Drogon"
+echo "  index.txt   ← OCSP revocation DB"
 echo ""
-echo "  ca.key      ← CA private key   (KEEP SECRET — not needed at runtime)"
-echo "  ca.crt      ← CA root cert     (loaded by server + OCSP responder)"
-echo "  server.key  ← Server private key  (loaded by Drogon)"
-echo "  server.crt  ← Server certificate  (loaded by Drogon)"
-echo "  index.txt   ← OCSP revocation DB  (loaded by OCSP responder)"
-echo "════════════════════════════════════════"
-echo ""
-echo "  Next step:  docker-compose up --build"
-echo ""
+echo "  Next: docker-compose up --build"
+echo "════════════════════════════════════════════"
 
-# Cleanup CSR — not needed after signing
-rm -f server.csr ca.srl
+

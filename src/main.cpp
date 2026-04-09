@@ -26,7 +26,7 @@ static std::string env(const char* name, const char* fallback)
 
 int main() 
 {
-    std::cout << "ML-KEM-768 + ML-DSA-65" << std::endl;
+    std::cout << "Hybrid TLS 1.3: X25519 + ML-KEM-768" << std::endl;
 
     // Load OQS provider into OpenSSL
     auto& oqs = OQSProvider::getInstance();

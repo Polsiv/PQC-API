@@ -9,7 +9,6 @@ RUN apt-get update && apt-get install -y \
     libsodium-dev libhiredis-dev \
     libpqxx-dev libpq-dev \
     nlohmann-json3-dev \
-    # Drogon dependencies
     libjsoncpp-dev uuid-dev zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
@@ -24,6 +23,7 @@ RUN git clone --depth 1 --branch main \
     cmake --install /tmp/liboqs/build
 
 # ── Build oqs-provider ────────────────────────────────────────────────────────
+# Use direct cp (same as local install) instead of cmake --install
 RUN git clone --depth 1 \
     https://github.com/open-quantum-safe/oqs-provider.git /tmp/oqs-provider && \
     cmake -S /tmp/oqs-provider -B /tmp/oqs-provider/build \
@@ -40,7 +40,7 @@ RUN git clone --depth 1 --recurse-submodules \
         -DCMAKE_BUILD_TYPE=Release \
         -DBUILD_EXAMPLES=OFF && \
     cmake --build /tmp/drogon/build --parallel $(nproc) && \
-    cmake --install /tmp/drogon/build 
+    cmake --install /tmp/drogon/build
 
 # ── Build the API ─────────────────────────────────────────────────────────────
 COPY . /app
@@ -48,8 +48,6 @@ RUN cmake -S /app -B /app/build -DCMAKE_BUILD_TYPE=Release && \
     cmake --build /app/build --parallel $(nproc)
 
 # ─── Stage 2: Runtime ─────────────────────────────────────────────────────────
-
-
 FROM ubuntu:24.04 AS runtime
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -57,21 +55,21 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y \
     libssl3 libcurl4 libsodium23 \
     libhiredis-dev libpqxx-dev libpq5 \
+    libjsoncpp25 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy built binaries and shared libs from builder
-COPY --from=builder /app/build/pqc_api        /usr/local/bin/pqc_api
-COPY --from=builder /usr/local/lib/liboqs.so* /usr/local/lib/
-COPY --from=builder /usr/local/lib/ossl-modules/oqsprovider.so \
-                    /usr/local/lib/ossl-modules/
+# Copy API binary
+COPY --from=builder /app/build/pqc_api /usr/local/bin/pqc_api
 
-# Configure OpenSSL to find the OQS provider
-RUN echo "\n[provider_sect]\noqsprovider = oqs_provider\n\
-[oqs_provider]\nactivate = 1" >> /etc/ssl/openssl.cnf
+# Copy liboqs shared library
+COPY --from=builder /usr/local/lib/liboqs.so* /usr/local/lib/
+
+# Copy oqs-provider to where OpenSSL actually looks on Ubuntu 24.04
+COPY --from=builder /usr/local/lib/ossl-modules/oqsprovider.so \
+                    /usr/lib/x86_64-linux-gnu/ossl-modules/
 
 RUN ldconfig
 
-# Runtime directories
 RUN mkdir -p /certs /logs
 WORKDIR /app
 
