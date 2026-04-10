@@ -30,6 +30,7 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - SERVER_PORT=8443
+      - SIGNING_KEY_PATH=/certs/signing.key
     depends_on:
       postgres:
         condition: service_healthy

@@ -55,6 +55,8 @@ bool DilithiumSigner::loadPrivateKey(const std::string& pem_path) {
     }
 
     if (private_key_) EVP_PKEY_free(private_key_);
+    if (public_key_)  EVP_PKEY_free(public_key_);
+
     private_key_ = PEM_read_PrivateKey(f, nullptr, nullptr, nullptr);
     fclose(f);
 
@@ -63,6 +65,14 @@ bool DilithiumSigner::loadPrivateKey(const std::string& pem_path) {
         ERR_print_errors_fp(stderr);
         return false;
     }
+
+    // Extract public key from the private key
+    public_key_ = EVP_PKEY_dup(private_key_);
+    if (!public_key_) {
+        std::cerr << "[DilithiumSigner] Failed to extract public key\n";
+        return false;
+    }
+
     return true;
 }
 

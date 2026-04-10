@@ -101,3 +101,9 @@ echo "  Next: docker-compose up --build"
 echo "════════════════════════════════════════════"
 
 
+# ── Generate dedicated ML-DSA-65 signing key for JWT tokens ──────────────────
+echo ""
+echo "[+] Generating ML-DSA-65 JWT signing key..."
+openssl genpkey -provider oqsprovider -provider default \
+    -algorithm mldsa65 -out signing.key
+echo "      ✓ signing.key"
