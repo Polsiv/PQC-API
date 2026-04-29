@@ -34,7 +34,7 @@ RUN git clone --depth 1 \
     cp /tmp/oqs-provider/build/lib/oqsprovider.so /usr/local/lib/ossl-modules/
 
 # ── Build Drogon ──────────────────────────────────────────────────────────────
-RUN git clone --depth 1 --recurse-submodules \
+RUN git clone --depth 1 --branch v1.9.12 --recurse-submodules \
     https://github.com/drogonframework/drogon.git /tmp/drogon && \
     cmake -S /tmp/drogon -B /tmp/drogon/build \
         -DCMAKE_BUILD_TYPE=Release \

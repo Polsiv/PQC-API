@@ -7,6 +7,8 @@
 #include "persistence/RedisClient.h"
 #include "persistence/UserRepository.h"
 #include "persistence/SessionRepository.h"
+#include "persistence/DocumentRepository.h"
+#include "crypto/DilithiumSigner.h"
 #include "auth/AuthManager.h"
 #include "api/Controllers.h"
 
@@ -103,14 +105,40 @@ int main()
     // ── 6. Build application layer ────────────────────────────────────────────
     AuthManager auth(jwt_secret, user_repo, session_repo);
 
-    // ── 7. Register Drogon controllers ───────────────────────────────────────
+    // ── 7. Load or generate ML-DSA-65 keypair for document signing ────────────
+    DilithiumSigner doc_signer;
+    std::string mldsa_key_path = env("MLDSA_KEY_PATH", "/certs/mldsa_server.key");
+
+    if (!doc_signer.loadPrivateKey(mldsa_key_path)) {
+        std::cout << "[main] Generating new ML-DSA-65 document signing keypair...\n";
+        if (!doc_signer.generateKeyPair()) {
+            std::cerr << "[main] ML-DSA-65 keygen failed. Aborting.\n";
+            return 1;
+        }
+        std::string pem = doc_signer.exportPrivateKeyPEM();
+        FILE* f = fopen(mldsa_key_path.c_str(), "w");
+        if (f) {
+            fwrite(pem.data(), 1, pem.size(), f);
+            fclose(f);
+            std::cout << "[main] ML-DSA-65 key saved to " << mldsa_key_path << "\n";
+        } else {
+            std::cerr << "[main] Warning: could not persist ML-DSA-65 key to " << mldsa_key_path << "\n";
+        }
+    }
+
+    DocumentRepository doc_repo(db);
+    doc_repo.createTable();
+
+    // ── 8. Register Drogon controllers ───────────────────────────────────────
     auto auth_ctrl   = std::make_shared<AuthController>(auth);
     auto user_ctrl   = std::make_shared<UserController>(auth, user_repo);
     auto health_ctrl = std::make_shared<HealthController>();
+    auto doc_ctrl    = std::make_shared<DocumentController>(auth, doc_repo, doc_signer);
 
     drogon::app().registerController(auth_ctrl);
     drogon::app().registerController(user_ctrl);
     drogon::app().registerController(health_ctrl);
+    drogon::app().registerController(doc_ctrl);
 
     // ── 8. Configure Drogon with our OQS-backed SSL_CTX ──────────────────────
     int server_port = std::stoi(env("SERVER_PORT", "8443"));

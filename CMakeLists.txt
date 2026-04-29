@@ -45,6 +45,7 @@ set(SOURCES
     src/persistence/PostgreSQLClient.cpp
     src/persistence/UserRepository.cpp
     src/persistence/SessionRepository.cpp
+    src/persistence/DocumentRepository.cpp
 
     # Auth
     src/auth/AuthManager.cpp

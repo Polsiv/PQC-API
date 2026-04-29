@@ -2,6 +2,8 @@
 
 #include "auth/AuthManager.h"
 #include "persistence/UserRepository.h"
+#include "persistence/DocumentRepository.h"
+#include "crypto/DilithiumSigner.h"
 #include <drogon/HttpController.h>
 #include <nlohmann/json.hpp>
 
@@ -93,4 +95,44 @@ public:
 
     void check(const HttpRequestPtr& req,
                std::function<void(const HttpResponsePtr&)>&& callback);
+};
+
+// ─── DocumentController ───────────────────────────────────────────────────────
+// ML-DSA-65 (Dilithium3) PDF sign, list, download, and verify.
+// All endpoints require a valid JWT in the Authorization header.
+
+class DocumentController : public HttpController<DocumentController, false> {
+public:
+    METHOD_LIST_BEGIN
+        ADD_METHOD_TO(DocumentController::sign,     "/api/documents/sign",          Post);
+        ADD_METHOD_TO(DocumentController::list,     "/api/documents",               Get);
+        ADD_METHOD_TO(DocumentController::download, "/api/documents/{id}/download", Get);
+        ADD_METHOD_TO(DocumentController::verify,   "/api/documents/{id}/verify",   Post);
+    METHOD_LIST_END
+
+    DocumentController(AuthManager& auth,
+                       DocumentRepository& doc_repo,
+                       DilithiumSigner& signer)
+        : auth_(auth), doc_repo_(doc_repo), signer_(signer) {}
+
+    void sign(const HttpRequestPtr& req,
+              std::function<void(const HttpResponsePtr&)>&& cb);
+
+    void list(const HttpRequestPtr& req,
+              std::function<void(const HttpResponsePtr&)>&& cb);
+
+    void download(const HttpRequestPtr& req,
+                  std::function<void(const HttpResponsePtr&)>&& cb,
+                  int id);
+
+    void verify(const HttpRequestPtr& req,
+                std::function<void(const HttpResponsePtr&)>&& cb,
+                int id);
+
+private:
+    std::optional<std::string> extractUserId(const HttpRequestPtr& req) const;
+
+    AuthManager&        auth_;
+    DocumentRepository& doc_repo_;
+    DilithiumSigner&    signer_;
 };
