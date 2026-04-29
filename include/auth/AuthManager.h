@@ -1,6 +1,5 @@
 #pragma once
 
-#include "crypto/DilithiumSigner.h"
 #include "persistence/UserRepository.h"
 #include "persistence/SessionRepository.h"
 #include <string>
@@ -13,21 +12,11 @@ struct AuthResult {
     std::string error;
 };
 
-/**
- * AuthManager
- * Handles registration, login, and token verification.
- *
- * Token format (Dilithium-signed JWT-style):
- *   Base64(header).Base64(payload).Base64(ML-DSA-65 signature)
- *
- * Password storage: Argon2id via libsodium (crypto_pwhash).
- * Token signing:    ML-DSA-65 via DilithiumSigner.
- */
 class AuthManager {
 public:
-    AuthManager(DilithiumSigner&    signer,
-                UserRepository&     user_repo,
-                SessionRepository&  session_repo);
+    AuthManager(const std::string& secret_key,
+                UserRepository&    user_repo,
+                SessionRepository& session_repo);
 
     // Register a new user — hashes password with Argon2id
     AuthResult registerUser(const std::string& username,
@@ -53,7 +42,7 @@ private:
                            std::string& out_user_id,
                            std::string& out_session_id) const;
 
-    DilithiumSigner&   signer_;
+    std::string        secret_key_;
     UserRepository&    user_repo_;
     SessionRepository& session_repo_;
 

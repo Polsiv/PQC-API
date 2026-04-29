@@ -2,6 +2,8 @@
 #include <sodium.h>
 #include <openssl/bio.h>
 #include <openssl/evp.h>
+#include <openssl/hmac.h>
+#include <openssl/crypto.h>
 #include <nlohmann/json.hpp>
 #include <iostream>
 #include <sstream>
@@ -71,10 +73,10 @@ static std::string generate_session_id() {
 
 // ─── AuthManager ─────────────────────────────────────────────────────────────
 
-AuthManager::AuthManager(DilithiumSigner&   signer,
+AuthManager::AuthManager(const std::string& secret_key,
                          UserRepository&    user_repo,
                          SessionRepository& session_repo)
-    : signer_(signer), user_repo_(user_repo), session_repo_(session_repo) {
+    : secret_key_(secret_key), user_repo_(user_repo), session_repo_(session_repo) {
     if (sodium_init() < 0) {
         throw std::runtime_error("[AuthManager] libsodium init failed");
     }
@@ -157,7 +159,7 @@ bool AuthManager::verifyPassword(const std::string& password,
 std::string AuthManager::buildToken(const std::string& user_id,
                                      const std::string& session_id) const {
     // Header
-    json header = { {"alg", "ML-DSA-65"}, {"typ", "JWT"} };
+    json header = { {"alg", "HS256"}, {"typ", "JWT"} };
     std::string h = base64url_encode(header.dump());
 
     // Payload
@@ -172,12 +174,17 @@ std::string AuthManager::buildToken(const std::string& user_id,
     };
     std::string p = base64url_encode(payload.dump());
 
-    // Sign header.payload with ML-DSA-65
+    // Sign header.payload with HMAC-SHA256
     std::string signing_input = h + "." + p;
-    auto sig_bytes = signer_.sign(signing_input);
+    unsigned char digest[EVP_MAX_MD_SIZE];
+    unsigned int  digest_len = 0;
+    HMAC(EVP_sha256(),
+         secret_key_.data(), static_cast<int>(secret_key_.size()),
+         reinterpret_cast<const unsigned char*>(signing_input.data()),
+         signing_input.size(), digest, &digest_len);
 
     std::string sig = base64url_encode(
-        std::string(sig_bytes.begin(), sig_bytes.end()));
+        std::string(reinterpret_cast<char*>(digest), digest_len));
 
     return h + "." + p + "." + sig;
 }
@@ -195,12 +202,18 @@ bool AuthManager::parseToken(const std::string& token,
     std::string p   = token.substr(p1 + 1, p2 - p1 - 1);
     std::string sig = token.substr(p2 + 1);
 
-    // Verify ML-DSA-65 signature
+    // Verify HMAC-SHA256 signature
     std::string signing_input = h + "." + p;
-    std::string sig_decoded   = base64url_decode(sig);
-    std::vector<uint8_t> sig_bytes(sig_decoded.begin(), sig_decoded.end());
+    unsigned char expected[EVP_MAX_MD_SIZE];
+    unsigned int  expected_len = 0;
+    HMAC(EVP_sha256(),
+         secret_key_.data(), static_cast<int>(secret_key_.size()),
+         reinterpret_cast<const unsigned char*>(signing_input.data()),
+         signing_input.size(), expected, &expected_len);
 
-    if (!signer_.verify(signing_input, sig_bytes)) {
+    std::string sig_decoded = base64url_decode(sig);
+    if (sig_decoded.size() != expected_len ||
+        CRYPTO_memcmp(sig_decoded.data(), expected, expected_len) != 0) {
         std::cerr << "[AuthManager] Token signature verification failed\n";
         return false;
     }

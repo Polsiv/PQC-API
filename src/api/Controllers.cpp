@@ -103,7 +103,7 @@ void HealthController::check(const HttpRequestPtr&, std::function<void(const Htt
         {"tls",             "1.3"},
         {"key_exchange",    "X25519 + ML-KEM-768 (hybrid)"},
         {"tls_auth",        "ECDSA P-256 (certificate)"},
-        {"token_signing",   "ML-DSA-65 (application layer)"},
+        {"token_signing",   "HS256"},
         {"encryption",      "AES-256-GCM"}
     }));
 }

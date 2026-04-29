@@ -3,7 +3,6 @@
 #include "pki/Certificate.h"
 #include "pki/OCSPClient.h"
 #include "pki/RevocationChecker.h"
-#include "crypto/DilithiumSigner.h"
 #include "persistence/PostgreSQLClient.h"
 #include "persistence/RedisClient.h"
 #include "persistence/UserRepository.h"
@@ -98,17 +97,11 @@ int main()
     // Ensure schema exists
     user_repo.createTable();
 
-    // 5. Load signing key for application-layer JWT tokens
-    DilithiumSigner signer;
-    std::string signing_key_path = env("SIGNING_KEY_PATH", "/certs/server.key");
-    if (!signer.loadPrivateKey(signing_key_path)) {
-        // Fallback: generate ephemeral signing key (not recommended for production)
-        std::cout << "[main] Generating ephemeral ML-DSA-65 signing key...\n";
-        signer.generateKeyPair();
-    }
+    // 5. Load JWT HMAC secret
+    std::string jwt_secret = env("JWT_SECRET", "change-me-in-production");
 
     // ── 6. Build application layer ────────────────────────────────────────────
-    AuthManager auth(signer, user_repo, session_repo);
+    AuthManager auth(jwt_secret, user_repo, session_repo);
 
     // ── 7. Register Drogon controllers ───────────────────────────────────────
     auto auth_ctrl   = std::make_shared<AuthController>(auth);
