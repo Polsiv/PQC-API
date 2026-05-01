@@ -104,10 +104,12 @@ public:
 class DocumentController : public HttpController<DocumentController, false> {
 public:
     METHOD_LIST_BEGIN
-        ADD_METHOD_TO(DocumentController::sign,     "/api/documents/sign",          Post);
-        ADD_METHOD_TO(DocumentController::list,     "/api/documents",               Get);
-        ADD_METHOD_TO(DocumentController::download, "/api/documents/{id}/download", Get);
-        ADD_METHOD_TO(DocumentController::verify,   "/api/documents/{id}/verify",   Post);
+        ADD_METHOD_TO(DocumentController::sign,           "/api/documents/sign",          Post);
+        ADD_METHOD_TO(DocumentController::list,           "/api/documents",               Get);
+        ADD_METHOD_TO(DocumentController::download,       "/api/documents/{id}/download", Get);
+        ADD_METHOD_TO(DocumentController::verify,         "/api/documents/{id}/verify",   Post);
+        ADD_METHOD_TO(DocumentController::publicKey,      "/api/documents/public-key",    Get);
+        ADD_METHOD_TO(DocumentController::verifyExternal, "/api/documents/verify",        Post);
     METHOD_LIST_END
 
     DocumentController(AuthManager& auth,
@@ -128,6 +130,12 @@ public:
     void verify(const HttpRequestPtr& req,
                 std::function<void(const HttpResponsePtr&)>&& cb,
                 int id);
+
+    void publicKey(const HttpRequestPtr& req,
+                   std::function<void(const HttpResponsePtr&)>&& cb);
+
+    void verifyExternal(const HttpRequestPtr& req,
+                        std::function<void(const HttpResponsePtr&)>&& cb);
 
 private:
     std::optional<std::string> extractUserId(const HttpRequestPtr& req) const;

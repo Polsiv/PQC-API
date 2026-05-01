@@ -30,6 +30,11 @@ public:
     bool verify(const std::string& data,
                 const std::vector<uint8_t>& signature) const;
 
+    // Verify using a caller-supplied PEM public key — no loaded key required
+    static bool verifyWithPEM(const std::string& data,
+                               const std::vector<uint8_t>& signature,
+                               const std::string& public_key_pem);
+
     // Export keys to PEM string (for storage or distribution)
     std::string exportPrivateKeyPEM() const;
     std::string exportPublicKeyPEM()  const;

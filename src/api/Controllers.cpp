@@ -162,8 +162,7 @@ std::optional<std::string> DocumentController::extractUserId(const HttpRequestPt
     return auth_.verifyToken(auth_header.substr(7));
 }
 
-void DocumentController::sign(const HttpRequestPtr& req,
-                               std::function<void(const HttpResponsePtr&)>&& cb) {
+void DocumentController::sign(const HttpRequestPtr& req, std::function<void(const HttpResponsePtr&)>&& cb) {
     auto user_id_str = extractUserId(req);
     if (!user_id_str) return cb(errorResponse("Unauthorized", k401Unauthorized));
 
@@ -285,5 +284,62 @@ void DocumentController::verify(const HttpRequestPtr& req,
         {"algorithm", "ML-DSA-65"},
         {"filename",  doc->filename},
         {"sha256",    doc->sha256_hash}
+    }));
+}
+
+void DocumentController::publicKey(const HttpRequestPtr& req,
+                                    std::function<void(const HttpResponsePtr&)>&& cb) {
+    std::string pem = signer_.exportPublicKeyPEM();
+    if (pem.empty())
+        return cb(errorResponse("Public key unavailable", k500InternalServerError));
+
+    cb(jsonResponse({
+        {"algorithm",      "ML-DSA-65"},
+        {"public_key_pem", pem}
+    }));
+}
+
+void DocumentController::verifyExternal(const HttpRequestPtr& req,
+                                         std::function<void(const HttpResponsePtr&)>&& cb) {
+    MultiPartParser mp;
+    if (mp.parse(req) != 0)
+        return cb(errorResponse("Expected multipart/form-data", k400BadRequest));
+
+    // Locate the PDF part by field name
+    std::string pdf_str;
+    for (const auto& f : mp.getFiles()) {
+        if (f.getItemName() == "pdf") {
+            auto view = f.fileContent();
+            pdf_str.assign(view.data(), view.size());
+            break;
+        }
+    }
+    if (pdf_str.empty())
+        return cb(errorResponse("Missing pdf field", k400BadRequest));
+
+    const auto& params = mp.getParameters();
+    auto sig_it = params.find("signature");
+    auto key_it = params.find("public_key");
+
+    if (sig_it == params.end())
+        return cb(errorResponse("Missing signature field", k400BadRequest));
+    if (key_it == params.end())
+        return cb(errorResponse("Missing public_key field", k400BadRequest));
+
+    auto sig_bytes = base64Decode(sig_it->second);
+    if (sig_bytes.empty())
+        return cb(errorResponse("Invalid base64 signature", k400BadRequest));
+
+    bool valid = false;
+    try {
+        valid = DilithiumSigner::verifyWithPEM(pdf_str, sig_bytes, key_it->second);
+    } catch (const std::exception& e) {
+        std::cerr << "[DocumentController] verifyExternal failed: " << e.what() << "\n";
+        return cb(errorResponse("Verification error", k500InternalServerError));
+    }
+
+    cb(jsonResponse({
+        {"valid",     valid},
+        {"algorithm", "ML-DSA-65"}
     }));
 }

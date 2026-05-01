@@ -68,3 +68,16 @@
 
 #### `CMakeLists.txt`
 - Added `src/persistence/DocumentRepository.cpp` to `SOURCES`
+
+---
+
+### Phase 3 — Public key exposure and external verification
+
+#### `include/api/Controllers.h`
+- Added two new endpoints to `DocumentController`:
+  - `GET  /api/documents/public-key`
+  - `POST /api/documents/verify`
+
+#### `src/api/Controllers.cpp`
+- `DocumentController::publicKey`: exports the server's ML-DSA-65 public key as PEM via `DilithiumSigner::exportPublicKeyPEM()`; returns `{ algorithm, public_key_pem }`
+- `DocumentController::verifyExternal`: stateless external verification endpoint; accepts multipart `pdf` (file), `signature` (base64), and `public_key` (PEM); calls `DilithiumSigner::verifyWithPEM()` without requiring authentication or database access; returns `{ valid, algorithm }`

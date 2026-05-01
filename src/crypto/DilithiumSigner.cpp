@@ -157,6 +157,36 @@ bool DilithiumSigner::verify(const std::string& data,
     return result == 1;
 }
 
+bool DilithiumSigner::verifyWithPEM(const std::string& data,
+                                     const std::vector<uint8_t>& signature,
+                                     const std::string& public_key_pem) {
+    BIO* bio = BIO_new_mem_buf(public_key_pem.data(), static_cast<int>(public_key_pem.size()));
+    if (!bio) return false;
+
+    EVP_PKEY* pub_key = PEM_read_bio_PUBKEY(bio, nullptr, nullptr, nullptr);
+    BIO_free(bio);
+    if (!pub_key) return false;
+
+    EVP_MD_CTX* md_ctx = EVP_MD_CTX_new();
+    if (!md_ctx) { EVP_PKEY_free(pub_key); return false; }
+
+    if (EVP_DigestVerifyInit_ex(md_ctx, nullptr, nullptr,
+                                 nullptr, nullptr, pub_key, nullptr) <= 0) {
+        EVP_MD_CTX_free(md_ctx);
+        EVP_PKEY_free(pub_key);
+        return false;
+    }
+
+    int result = EVP_DigestVerify(
+        md_ctx,
+        signature.data(), signature.size(),
+        reinterpret_cast<const uint8_t*>(data.data()), data.size());
+
+    EVP_MD_CTX_free(md_ctx);
+    EVP_PKEY_free(pub_key);
+    return result == 1;
+}
+
 std::string DilithiumSigner::exportPrivateKeyPEM() const {
     return exportKeyPEM(private_key_, true);
 }
