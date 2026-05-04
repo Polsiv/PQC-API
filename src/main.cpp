@@ -144,6 +144,7 @@ int main()
     int server_port = std::stoi(env("SERVER_PORT", "8443"));
 
     drogon::app()
+        .setDocumentRoot("./static")
         .addListener("0.0.0.0", server_port, true,
                      cert_path, key_path)   // Drogon manages TLS internally
         .setThreadNum(4)

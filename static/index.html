@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PQC Sign — Login</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <div class="page-center">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <h1>PQC Sign</h1>
+        <p>Post-Quantum Document Signing</p>
+      </div>
+
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="login">Login</button>
+        <button class="tab-btn" data-tab="register">Register</button>
+      </div>
+
+      <!-- Login -->
+      <div id="tab-login" class="tab-panel active">
+        <div id="login-alert" class="alert alert-error"></div>
+        <div class="form-group">
+          <label for="login-user">Username</label>
+          <input type="text" id="login-user" placeholder="Enter username" autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label for="login-pass">Password</label>
+          <input type="password" id="login-pass" placeholder="Enter password" autocomplete="current-password">
+        </div>
+        <div class="form-actions">
+          <button id="login-btn" class="btn btn-primary">Login</button>
+        </div>
+      </div>
+
+      <!-- Register -->
+      <div id="tab-register" class="tab-panel">
+        <div id="reg-alert"   class="alert alert-error"></div>
+        <div id="reg-success" class="alert alert-success"></div>
+        <div class="form-group">
+          <label for="reg-user">Username</label>
+          <input type="text" id="reg-user" placeholder="Choose a username" autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label for="reg-pass">Password</label>
+          <input type="password" id="reg-pass" placeholder="Choose a password" autocomplete="new-password">
+        </div>
+        <div class="form-actions">
+          <button id="reg-btn" class="btn btn-primary">Create Account</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/api.js"></script>
+  <script>
+    Auth.redirectIfAuth();
+
+    // Tab switching
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+      });
+    });
+
+    function showAlert(id, msg) {
+      const el = document.getElementById(id);
+      el.textContent = msg;
+      el.classList.add('show');
+    }
+    function hideAlert(id) { document.getElementById(id).classList.remove('show'); }
+
+    // Login
+    async function doLogin() {
+      hideAlert('login-alert');
+      const u = document.getElementById('login-user').value.trim();
+      const p = document.getElementById('login-pass').value;
+      if (!u || !p) { showAlert('login-alert', 'Username and password are required'); return; }
+
+      const btn = document.getElementById('login-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Signing in…';
+
+      const { ok, data } = await Api.login(u, p);
+
+      btn.disabled = false;
+      btn.textContent = 'Login';
+
+      if (!ok) { showAlert('login-alert', data.error || 'Login failed'); return; }
+
+      Auth.setSession(data.token, data.user_id, u);
+      window.location.href = '/dashboard.html';
+    }
+
+    document.getElementById('login-btn').addEventListener('click', doLogin);
+    ['login-user', 'login-pass'].forEach(id => {
+      document.getElementById(id).addEventListener('keydown', e => {
+        if (e.key === 'Enter') doLogin();
+      });
+    });
+
+    // Register
+    async function doRegister() {
+      hideAlert('reg-alert');
+      hideAlert('reg-success');
+      const u = document.getElementById('reg-user').value.trim();
+      const p = document.getElementById('reg-pass').value;
+      if (!u || !p) { showAlert('reg-alert', 'Username and password are required'); return; }
+
+      const btn = document.getElementById('reg-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Creating account…';
+
+      const { ok, data } = await Api.register(u, p);
+
+      btn.disabled = false;
+      btn.textContent = 'Create Account';
+
+      if (!ok) { showAlert('reg-alert', data.error || 'Registration failed'); return; }
+
+      showAlert('reg-success', 'Account created! Redirecting to login…');
+      document.getElementById('reg-user').value = '';
+      document.getElementById('reg-pass').value = '';
+      setTimeout(() => document.querySelector('[data-tab="login"]').click(), 1500);
+    }
+
+    document.getElementById('reg-btn').addEventListener('click', doRegister);
+    ['reg-user', 'reg-pass'].forEach(id => {
+      document.getElementById(id).addEventListener('keydown', e => {
+        if (e.key === 'Enter') doRegister();
+      });
+    });
+  </script>
+</body>
+</html>

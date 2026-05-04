@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PQC Sign — External Verifier</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-logo">PQC Sign <span>ML-DSA-65</span></div>
+    <div class="nav-right">
+      <a href="/dashboard.html" class="btn btn-ghost btn-sm">Dashboard</a>
+    </div>
+  </nav>
+
+  <div id="toast-container"></div>
+
+  <div class="verify-page">
+    <div class="page-title">External Signature Verifier</div>
+    <p class="page-sub">
+      Verify any PDF signed by this server's ML-DSA-65 key — no account required.
+    </p>
+
+    <form id="verify-form">
+      <div class="card">
+        <div class="card-title">1. Upload PDF</div>
+        <div id="drop-zone" class="drop-zone">
+          <div style="font-size:2rem">📄</div>
+          <p>Drop a PDF here or click to browse</p>
+          <div class="file-name" id="file-name"></div>
+          <input type="file" id="file-input" accept=".pdf,application/pdf">
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          2. Signature <span style="font-weight:400;color:var(--muted);font-size:.8rem">(base64)</span>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <textarea id="signature" placeholder="Paste the base64-encoded ML-DSA-65 signature here…"></textarea>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" style="justify-content:space-between">
+          <span>3. Public Key <span style="font-weight:400;color:var(--muted);font-size:.8rem">(PEM)</span></span>
+          <button type="button" id="fetch-key-btn" class="btn btn-ghost btn-sm">Fetch Server Key</button>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <textarea id="public-key"
+            placeholder="-----BEGIN PUBLIC KEY-----&#10;…&#10;-----END PUBLIC KEY-----"
+            style="min-height:160px"></textarea>
+        </div>
+      </div>
+
+      <button type="submit" id="verify-btn" class="btn btn-primary"
+        style="width:100%;justify-content:center;padding:.7rem;font-size:.95rem">
+        Verify Signature
+      </button>
+    </form>
+
+    <div id="verify-result" class="verify-result" style="display:none;margin-top:1.5rem"></div>
+  </div>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/verify.js"></script>
+</body>
+</html>

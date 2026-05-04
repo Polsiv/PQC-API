@@ -61,6 +61,9 @@ RUN apt-get update && apt-get install -y \
 # Copy API binary
 COPY --from=builder /app/build/pqc_api /usr/local/bin/pqc_api
 
+# Copy frontend static files
+COPY static /app/static
+
 # Copy liboqs shared library
 COPY --from=builder /usr/local/lib/liboqs.so* /usr/local/lib/
 
