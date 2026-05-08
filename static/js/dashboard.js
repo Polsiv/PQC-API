@@ -154,6 +154,13 @@ async function signDocument() {
   document.getElementById('file-input').value = '';
   btn.disabled = true;
   await loadDocuments();
+  openSigModal(data.signature, data.filename);
+}
+
+function openSigModal(signature, filename) {
+  document.getElementById('sig-modal-filename').textContent = filename;
+  document.getElementById('sig-box').value = signature;
+  document.getElementById('sig-modal').classList.add('open');
 }
 
 // ── Init ──────────────────────────────────────────────────────────
@@ -170,6 +177,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   document.getElementById('sign-btn').addEventListener('click', signDocument);
+
+  document.getElementById('sig-modal-close').addEventListener('click', () => {
+    document.getElementById('sig-modal').classList.remove('open');
+  });
+  document.getElementById('sig-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) e.currentTarget.classList.remove('open');
+  });
+  document.getElementById('sig-copy-btn').addEventListener('click', () => {
+    const btn = document.getElementById('sig-copy-btn');
+    navigator.clipboard.writeText(document.getElementById('sig-box').value).then(() => {
+      btn.textContent = 'Copied!';
+      setTimeout(() => { btn.textContent = 'Copy Signature'; }, 2000);
+    });
+  });
 
   document.getElementById('modal-close').addEventListener('click', () => {
     document.getElementById('verify-modal').classList.remove('open');

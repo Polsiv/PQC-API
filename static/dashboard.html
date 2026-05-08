@@ -74,6 +74,23 @@
     </div>
   </div>
 
+  <!-- Signature modal -->
+  <div id="sig-modal" class="modal-overlay">
+    <div class="modal" style="max-width:560px">
+      <div class="modal-header">
+        <div class="modal-title">Signature — <span id="sig-modal-filename" style="color:var(--muted);font-weight:400"></span></div>
+        <button class="modal-close" id="sig-modal-close">✕</button>
+      </div>
+      <p style="color:var(--muted);font-size:.875rem;margin-bottom:.75rem">
+        Your ML-DSA-65 signature — copy it to use for external verification.
+      </p>
+      <textarea id="sig-box" class="sig-box" readonly></textarea>
+      <button id="sig-copy-btn" class="btn btn-primary" style="margin-top:.75rem;width:100%;justify-content:center">
+        Copy Signature
+      </button>
+    </div>
+  </div>
+
   <!-- Verify modal -->
   <div id="verify-modal" class="modal-overlay">
     <div class="modal">

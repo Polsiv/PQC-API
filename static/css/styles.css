@@ -369,6 +369,21 @@ tbody td:last-child { white-space: nowrap; display: flex; gap: .4rem; }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ── Signature box ──────────────────────────────────────────────── */
+.sig-box {
+  width: 100%;
+  height: 120px;
+  resize: none;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: .72rem;
+  word-break: break-all;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: .6rem .75rem;
+  color: var(--muted);
+}
+
 /* ── External verify page ───────────────────────────────────────── */
 .verify-page {
   max-width: 680px;
