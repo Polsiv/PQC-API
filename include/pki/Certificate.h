@@ -5,13 +5,7 @@
 #include <string>
 #include <ctime>
 
-/**
- * Certificate
- * Wraps an X.509 certificate signed with ML-DSA-65 (Dilithium3).
- * Used by the server to load and validate its identity certificate
- * and by RevocationChecker to inspect cert metadata.
- */
-class Certificate 
+class Certificate
 {
     public:
         Certificate()  = default;

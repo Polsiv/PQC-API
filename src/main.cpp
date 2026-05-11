@@ -1,5 +1,4 @@
 #include "tls/OQSProvider.h"
-#include "tls/OpenSSLContext.h"
 #include "pki/Certificate.h"
 #include "pki/OCSPClient.h"
 #include "pki/RevocationChecker.h"
@@ -18,14 +17,14 @@
 
 
 
-// Read env variable with fallback 
+// Read env variable with fallback
 static std::string env(const char* name, const char* fallback)
 {
     const char* val = std::getenv(name);
     return val ? std::string(val) : std::string(fallback);
 }
 
-int main() 
+int main()
 {
     std::cout << "Hybrid TLS 1.3: X25519 + ML-KEM-768" << std::endl;
 
@@ -37,29 +36,13 @@ int main()
         return 1;
     }
 
-    // 2. Configure TLS context 
-
-    OpenSSLContext tls_ctx(OpenSSLContext::Mode::Server);
-
-    if (!tls_ctx.init())
-    {
-        std::cerr << "[main] TLS context init failed. Aborting.\n";
-        return 1;
-    }
+    // 2. Resolve cert paths (Drogon will load them when the listener starts)
 
     std::string cert_path = env("TLS_CERT_PATH", "/certs/server.crt");
     std::string key_path  = env("TLS_KEY_PATH",  "/certs/server.key");
     std::string ca_path   = env("CA_CERT_PATH",  "/certs/ca.crt");
 
-    if (!tls_ctx.loadCertificate(cert_path, key_path))
-    {  
-        std::cerr << "[main] Failed to load TLS certificate. Aborting.\n";
-        return 1;
-    }
-
-    tls_ctx.loadCAFile(ca_path);
-
-    // 3. Validate server cert against CA (revocation check at startup) 
+    // 3. Validate server cert against CA (revocation check at startup)
 
     Certificate server_cert, ca_cert;
 
@@ -85,7 +68,7 @@ int main()
     }
     std::cout << "[main] Certificate revocation check: OK\n";
 
-    // 4. Connect to persistence layer 
+    // 4. Connect to persistence layer
     std::string postgress_connection = env("DATABASE_URL", "host = postgres port = 5432 dbname = pqcapi user = pqcuser password = pqcpass");
     std::string redis_host = env("REDIS_HOST", "redis");
     int redis_port = std::stoi(env("REDIS_PORT", "6379"));
@@ -140,13 +123,26 @@ int main()
     drogon::app().registerController(health_ctrl);
     drogon::app().registerController(doc_ctrl);
 
-    // ── 8. Configure Drogon with our OQS-backed SSL_CTX ──────────────────────
+    // ── 8. Configure Drogon's TLS listener with PQC-aware SSL_CONF commands ──
+    // OQSProvider is already registered in OpenSSL's default library context,
+    // so Drogon's internal SSL_CTX inherits ML-KEM-768 / ML-DSA-65 support.
+    // We just need to tell that context to advertise the hybrid group and
+    // lower SECLEVEL so the ML-DSA-signed cert is accepted.
     int server_port = std::stoi(env("SERVER_PORT", "8443"));
+
+    std::vector<std::pair<std::string, std::string>> ssl_conf_cmds = {
+        {"Groups",       "X25519MLKEM768:x25519"},
+        {"MinProtocol",  "TLSv1.3"},
+        {"MaxProtocol",  "TLSv1.3"},
+        {"CipherString", "DEFAULT:@SECLEVEL=0"},
+    };
 
     drogon::app()
         .setDocumentRoot("./static")
-        .addListener("0.0.0.0", server_port, true,
-                     cert_path, key_path)   // Drogon manages TLS internally
+        .addListener("0.0.0.0", server_port, /*useSSL*/ true,
+                     cert_path, key_path,
+                     /*useOldTLS*/ false,
+                     ssl_conf_cmds)
         .setThreadNum(4)
         .setLogLevel(trantor::Logger::kInfo);
 

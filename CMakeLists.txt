@@ -30,7 +30,6 @@ set(SOURCES
 
     # TLS layer
     src/tls/OQSProvider.cpp
-    src/tls/OpenSSLContext.cpp
 
     # Crypto
     src/crypto/DilithiumSigner.cpp

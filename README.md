@@ -17,7 +17,7 @@ A C++ REST API secured end-to-end with post-quantum cryptography:
 ```
 pqc-api/
 ├── include/
-│   ├── tls/         OQSProvider, OpenSSLContext
+│   ├── tls/         OQSProvider
 │   ├── crypto/      DilithiumSigner
 │   ├── pki/         Certificate, OCSPClient, RevocationChecker
 │   ├── persistence/ RedisClient, PostgreSQLClient, UserRepository, SessionRepository
