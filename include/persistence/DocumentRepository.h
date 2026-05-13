@@ -27,6 +27,7 @@ public:
     std::vector<Document>      findByUserId(int user_id);
     std::optional<std::string> getPdfData(int id);
     bool                       ownedBy(int doc_id, int user_id);
+    bool                       deleteById(int id);
 
 private:
     PostgreSQLClient& db_;

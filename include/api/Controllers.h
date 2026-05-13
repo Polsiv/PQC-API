@@ -108,6 +108,7 @@ public:
         ADD_METHOD_TO(DocumentController::list,           "/api/documents",               Get);
         ADD_METHOD_TO(DocumentController::download,       "/api/documents/{id}/download", Get);
         ADD_METHOD_TO(DocumentController::verify,         "/api/documents/{id}/verify",   Post);
+        ADD_METHOD_TO(DocumentController::remove,         "/api/documents/{id}",          Delete);
         ADD_METHOD_TO(DocumentController::publicKey,      "/api/documents/public-key",    Get);
         ADD_METHOD_TO(DocumentController::verifyExternal, "/api/documents/verify",        Post);
     METHOD_LIST_END
@@ -128,6 +129,10 @@ public:
                   int id);
 
     void verify(const HttpRequestPtr& req,
+                std::function<void(const HttpResponsePtr&)>&& cb,
+                int id);
+
+    void remove(const HttpRequestPtr& req,
                 std::function<void(const HttpResponsePtr&)>&& cb,
                 int id);
 

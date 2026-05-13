@@ -287,6 +287,21 @@ void DocumentController::verify(const HttpRequestPtr& req,
     }));
 }
 
+void DocumentController::remove(const HttpRequestPtr& req,
+                                 std::function<void(const HttpResponsePtr&)>&& cb,
+                                 int id) {
+    auto user_id_str = extractUserId(req);
+    if (!user_id_str) return cb(errorResponse("Unauthorized", k401Unauthorized));
+
+    int user_id = std::stoi(*user_id_str);
+    if (!doc_repo_.ownedBy(id, user_id)) return cb(errorResponse("Not found", k404NotFound));
+
+    if (!doc_repo_.deleteById(id))
+        return cb(errorResponse("Failed to delete document", k500InternalServerError));
+
+    cb(jsonResponse({ {"deleted", true}, {"doc_id", id} }));
+}
+
 void DocumentController::publicKey(const HttpRequestPtr& req,
                                     std::function<void(const HttpResponsePtr&)>&& cb) {
     std::string pem = signer_.exportPublicKeyPEM();

@@ -60,6 +60,8 @@ function renderTable() {
           onclick="downloadDoc(${d.id}, '${escHtml(d.filename)}')">Download</button>
         <button class="btn btn-sm btn-ghost"
           onclick="openVerify(${d.id}, '${escHtml(d.filename)}')">Verify</button>
+        <button class="btn btn-sm btn-ghost"
+          onclick="deleteDoc(${d.id}, '${escHtml(d.filename)}')">Delete</button>
       </td>
     </tr>
   `).join('');
@@ -67,6 +69,18 @@ function renderTable() {
 
 async function downloadDoc(id, filename) {
   await Api.downloadDocument(id, filename);
+}
+
+async function deleteDoc(id, filename) {
+  if (!confirm(`Delete "${filename}"? This cannot be undone.`)) return;
+
+  const { ok, data } = await Api.deleteDocument(id);
+  if (!ok) {
+    toast(data.error || 'Delete failed', 'error');
+    return;
+  }
+  toast(`Deleted: ${filename}`, 'success');
+  await loadDocuments();
 }
 
 async function openVerify(id, filename) {

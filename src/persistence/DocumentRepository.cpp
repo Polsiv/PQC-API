@@ -87,3 +87,15 @@ bool DocumentRepository::ownedBy(int doc_id, int user_id) {
         { std::to_string(doc_id), std::to_string(user_id) });
     return !result.empty();
 }
+
+bool DocumentRepository::deleteById(int id) {
+    try {
+        auto result = db_.query(
+            "DELETE FROM documents WHERE id = $1 RETURNING id",
+            { std::to_string(id) });
+        return !result.empty();
+    } catch (const std::exception& e) {
+        std::cerr << "[DocumentRepository] deleteById failed: " << e.what() << "\n";
+        return false;
+    }
+}

@@ -60,6 +60,14 @@ const Api = {
     return { ok: r.ok, data: await r.json() };
   },
 
+  async deleteDocument(id) {
+    const r = await fetch(`/api/documents/${id}`, {
+      method: 'DELETE',
+      headers: this._h()
+    });
+    return { ok: r.ok, data: await r.json() };
+  },
+
   async getPublicKey() {
     const r = await fetch('/api/documents/public-key');
     return { ok: r.ok, data: await r.json() };

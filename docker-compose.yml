@@ -24,13 +24,11 @@ services:
       - TLS_CERT_PATH=/certs/server.crt
       - TLS_KEY_PATH=/certs/server.key
       - CA_CERT_PATH=/certs/ca.crt
-      - SIGNING_KEY_PATH=/certs/server.key
       - OCSP_URL=http://ocsp:8080
       - DATABASE_URL=host=postgres port=5432 dbname=pqcapi user=pqcuser password=pqcpass
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - SERVER_PORT=8443
-      - SIGNING_KEY_PATH=/certs/signing.key
     depends_on:
       postgres:
         condition: service_healthy

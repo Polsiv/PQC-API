@@ -144,6 +144,7 @@ int main()
                      /*useOldTLS*/ false,
                      ssl_conf_cmds)
         .setThreadNum(4)
+        .setClientMaxBodySize(50 * 1024 * 1024)   // 50 MB — fits typical PDFs + signature + PEM
         .setLogLevel(trantor::Logger::kInfo);
 
     std::cout << "[main] Server starting on port " << server_port
