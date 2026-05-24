@@ -125,9 +125,8 @@ int main()
 
     // ── 8. Configure Drogon's TLS listener with PQC-aware SSL_CONF commands ──
     // OQSProvider is already registered in OpenSSL's default library context,
-    // so Drogon's internal SSL_CTX inherits ML-KEM-768 / ML-DSA-65 support.
+    // so Drogon's internal SSL_CTX inherits ML-KEM-768
     // We just need to tell that context to advertise the hybrid group and
-    // lower SECLEVEL so the ML-DSA-signed cert is accepted.
     int server_port = std::stoi(env("SERVER_PORT", "8443"));
 
     std::vector<std::pair<std::string, std::string>> ssl_conf_cmds = {

@@ -22,6 +22,7 @@ bool OQSProvider::load()
     // Using an isolated context caused CTR-DRBG failures because SSL_CTX
     // and the RNG couldn't find the default provider algorithms.
     default_provider_ = OSSL_PROVIDER_load(nullptr, "default");
+
     if (!default_provider_)
     {
         std::cerr << "[OQSProvider] Failed to load default provider\n";
