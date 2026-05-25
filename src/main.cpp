@@ -85,10 +85,10 @@ int main()
     // 5. Load JWT HMAC secret
     std::string jwt_secret = env("JWT_SECRET", "change-me-in-production");
 
-    // ── 6. Build application layer ────────────────────────────────────────────
+    // 6. Build application layer
     AuthManager auth(jwt_secret, user_repo, session_repo);
 
-    // ── 7. Load or generate ML-DSA-65 keypair for document signing ────────────
+    // 7. Load or generate ML-DSA-65 keypair for document signing
     DilithiumSigner doc_signer;
     std::string mldsa_key_path = env("MLDSA_KEY_PATH", "/certs/mldsa_server.key");
 
@@ -112,7 +112,7 @@ int main()
     DocumentRepository doc_repo(db);
     doc_repo.createTable();
 
-    // ── 8. Register Drogon controllers ───────────────────────────────────────
+    // 8. Register Drogon controllers
     auto auth_ctrl   = std::make_shared<AuthController>(auth);
     auto user_ctrl   = std::make_shared<UserController>(auth, user_repo);
     auto health_ctrl = std::make_shared<HealthController>();
@@ -123,7 +123,7 @@ int main()
     drogon::app().registerController(health_ctrl);
     drogon::app().registerController(doc_ctrl);
 
-    // ── 8. Configure Drogon's TLS listener with PQC-aware SSL_CONF commands ──
+    // 8. Configure Drogon's TLS listener with PQC-aware SSL_CONF commands
     // OQSProvider is already registered in OpenSSL's default library context,
     // so Drogon's internal SSL_CTX inherits ML-KEM-768
     // We just need to tell that context to advertise the hybrid group and
@@ -143,7 +143,7 @@ int main()
                      /*useOldTLS*/ false,
                      ssl_conf_cmds)
         .setThreadNum(4)
-        .setClientMaxBodySize(50 * 1024 * 1024)   // 50 MB — fits typical PDFs + signature + PEM
+        .setClientMaxBodySize(50 * 1024 * 1024)   // <- this 50 MB
         .setLogLevel(trantor::Logger::kInfo);
 
     std::cout << "[main] Server starting on port " << server_port

@@ -33,7 +33,7 @@ import (
 	"time"
 )
 
-// ─── Config ──────────────────────────────────────────────────────────────────
+// Config
 
 var (
 	baseURL  = flag.String("base", "https://localhost:8443", "API base URL")
@@ -44,7 +44,7 @@ var (
 	password = flag.String("pass", "testpass123!", "Test password")
 )
 
-// ─── Metrics ──────────────────────────────────────────────────────────────────
+// MEtrics
 
 type Result struct {
 	Name     string
