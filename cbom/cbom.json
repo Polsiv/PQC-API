@@ -314,21 +314,6 @@
 		},
 		{
 			"type": "cryptographic-asset",
-			"bom-ref": "crypto/certificate/ocsp",
-			"name": "OCSP Responder Certificate",
-			"description": "Certificate used by the sidecar OCSP responder container to sign revocation status responses.",
-			"cryptoProperties": {
-				"assetType": "certificate",
-				"certificateProperties": {
-					"subjectName": "CN=PQC API OCSP Responder, O=PQC API Server, C=US",
-					"issuerName": "CN=PQC API Offline CA, O=PQC API Server, C=US",
-					"signatureAlgorithmRef": "crypto/algorithm/ecdsa-p256",
-					"certificateFormat": "X.509"
-				}
-			}
-		},
-		{
-			"type": "cryptographic-asset",
 			"bom-ref": "crypto/related-material/mldsa-signing-key",
 			"name": "ML-DSA-65 Server Signing Key",
 			"description": "Private key used to sign every uploaded PDF. Persisted at ./certs/mldsa_server.key and mounted read-only into the API container to keep a stable signing identity across restarts.",
