@@ -19,12 +19,15 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"flag"
 	"fmt"
 	"io"
 	"log"
 	"mime/multipart"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -50,6 +53,33 @@ type Result struct {
 	Name     string
 	Samples  []time.Duration
 	Failures int
+
+	// Handshake byte counts (only set for handshake benchmarks). These record
+	// the raw bytes on the wire during the TLS handshake, before any HTTP.
+	HandshakeBytesSent int64
+	HandshakeBytesRecv int64
+}
+
+// countingConn wraps a net.Conn and counts the raw bytes read and written.
+// By wrapping the TCP connection *before* the TLS layer is built on top of it,
+// we capture the exact handshake size on the wire (key shares, certificate,
+// CertificateVerify, etc.), including TLS record framing overhead.
+type countingConn struct {
+	net.Conn
+	read    int64
+	written int64
+}
+
+func (c *countingConn) Read(b []byte) (int, error) {
+	n, err := c.Conn.Read(b)
+	c.read += int64(n)
+	return n, err
+}
+
+func (c *countingConn) Write(b []byte) (int, error) {
+	n, err := c.Conn.Write(b)
+	c.written += int64(n)
+	return n, err
 }
 
 func (r *Result) Record(d time.Duration, err error) {
@@ -82,6 +112,13 @@ func (r *Result) Print() {
 		r.Name, avg.Round(time.Microsecond), p50.Round(time.Microsecond),
 		p95.Round(time.Microsecond), p99.Round(time.Microsecond),
 		len(r.Samples), r.Failures)
+
+	if r.HandshakeBytesSent > 0 || r.HandshakeBytesRecv > 0 {
+		fmt.Printf("  %-40s  total=%d bytes (sent %d / recv %d)\n",
+			"  └─ handshake size",
+			r.HandshakeBytesSent+r.HandshakeBytesRecv,
+			r.HandshakeBytesSent, r.HandshakeBytesRecv)
+	}
 }
 
 // ─── HTTP Client ──────────────────────────────────────────────────────────────
@@ -108,55 +145,60 @@ func buildClient(caPath string) *http.Client {
 	}
 }
 
-// measureHandshake performs a fresh TLS handshake and returns the time
-// it took to complete the TLS layer only (not the full HTTP round trip).
-// The negotiated key group is detected via the VerifyConnection callback,
-// which is the correct way to inspect handshake state in Go's crypto/tls.
-func measureHandshake(addr string, caPath string) (time.Duration, string, error) {
+// handshakeSample holds the outcome of a single measured TLS handshake.
+type handshakeSample struct {
+	elapsed   time.Duration
+	bytesSent int64 // raw bytes written during the handshake (ClientHello, etc.)
+	bytesRecv int64 // raw bytes read during the handshake (ServerHello, cert, etc.)
+}
+
+// measureHandshake performs a fresh TLS handshake, pinning the key-exchange
+// group to `curves`, and returns the handshake-completion time together with the
+// exact number of bytes exchanged on the wire. Pinning a single curve forces the
+// server to use it (the handshake fails if the server doesn't support it), which
+// makes the byte counts directly attributable to that key-exchange algorithm.
+func measureHandshake(addr, caPath string, curves []tls.CurveID) (handshakeSample, error) {
+	var sample handshakeSample
+
 	caPEM, err := os.ReadFile(caPath)
 	if err != nil {
-		return 0, "", err
+		return sample, err
 	}
 	pool := x509.NewCertPool()
 	pool.AppendCertsFromPEM(caPEM)
-
-	var negotiatedGroup string
 
 	tlsCfg := &tls.Config{
 		RootCAs:            pool,
 		InsecureSkipVerify: true, // server cert lacks SANs — dev only
 		MinVersion:         tls.VersionTLS13,
-		// VerifyConnection is called after the handshake completes (even with
-		// InsecureSkipVerify), so we can still inspect the negotiated state.
-		VerifyConnection: func(cs tls.ConnectionState) error {
-			// Go 1.24+ encodes the negotiated group in the handshake transcript.
-			// The most reliable public signal is the size of TLSUnique:
-			// X25519MLKEM768 produces a 36-byte ServerHello key share (32 X25519
-			// + 1088 ML-KEM ciphertext), but TLSUnique doesn't expose that.
-			// Instead we confirm TLS 1.3 was used (required for PQC) and note
-			// that Go 1.24+ always prefers X25519MLKEM768 when the server
-			// supports it.
-			if cs.Version == tls.VersionTLS13 {
-				negotiatedGroup = "TLS 1.3 ✓ (X25519MLKEM768 offered as top preference by Go 1.24+)"
-			} else {
-				negotiatedGroup = fmt.Sprintf("TLS version 0x%04x — not TLS 1.3!", cs.Version)
-			}
-			return nil // returning nil keeps the connection alive
-		},
+		CurvePreferences:   curves,
 	}
 
 	host := strings.TrimPrefix(addr, "https://")
 	host = strings.TrimPrefix(host, "http://")
 
-	start := time.Now()
-	conn, err := tls.Dial("tcp", host, tlsCfg)
-	elapsed := time.Since(start)
+	// Dial raw TCP first, wrap it in the byte counter, then drive TLS on top so
+	// every handshake byte passes through (and is counted by) the wrapper.
+	raw, err := net.Dial("tcp", host)
 	if err != nil {
-		return 0, "", fmt.Errorf("TLS dial failed: %w", err)
+		return sample, fmt.Errorf("TCP dial failed: %w", err)
 	}
-	defer conn.Close()
+	cc := &countingConn{Conn: raw}
+	conn := tls.Client(cc, tlsCfg)
 
-	return elapsed, negotiatedGroup, nil
+	start := time.Now()
+	err = conn.Handshake()
+	sample.elapsed = time.Since(start)
+	if err != nil {
+		conn.Close()
+		return sample, fmt.Errorf("TLS handshake failed: %w", err)
+	}
+
+	// Read counters immediately after the handshake, before any application data.
+	sample.bytesSent = cc.written
+	sample.bytesRecv = cc.read
+	conn.Close()
+	return sample, nil
 }
 
 // ─── API Helpers ──────────────────────────────────────────────────────────────
@@ -347,23 +389,52 @@ func (c *apiClient) verifyPDF(pdfBytes []byte, signatureB64, pubKeyPEM string) (
 
 // ─── Benchmark Suites ────────────────────────────────────────────────────────
 
-func benchmarkHandshake(addr, caPath string, iterations int) *Result {
-	result := &Result{Name: "TLS Handshake (X25519MLKEM768)"}
-	var negotiatedGroup string
-
-	for i := 0; i < iterations; i++ {
-		d, group, err := measureHandshake(addr, caPath)
-		if i == 0 {
-			if err != nil {
-				fmt.Printf("\n  [Handshake] FIRST ERROR: %v\n", err)
-			}
-			negotiatedGroup = group
-		}
-		result.Record(d, err)
+// benchmarkHandshake measures handshake latency AND on-the-wire handshake size
+// for two key-exchange configurations: the PQC hybrid (X25519MLKEM768) and the
+// classical baseline (X25519). Running both makes the cost of post-quantum key
+// exchange directly comparable — same server, same ECDSA certificate, only the
+// KEX group differs.
+func benchmarkHandshake(addr, caPath string, iterations int) []*Result {
+	variants := []struct {
+		name   string
+		curves []tls.CurveID
+	}{
+		{"TLS Handshake (X25519MLKEM768 PQC)", []tls.CurveID{tls.X25519MLKEM768}},
+		{"TLS Handshake (X25519 classical)", []tls.CurveID{tls.X25519}},
 	}
 
-	fmt.Printf("\n  [Handshake] Negotiated key group: %s\n", negotiatedGroup)
-	return result
+	var results []*Result
+	for _, v := range variants {
+		r := &Result{Name: v.name}
+		var lastSent, lastRecv int64
+
+		for i := 0; i < iterations; i++ {
+			sample, err := measureHandshake(addr, caPath, v.curves)
+			if i == 0 && err != nil {
+				fmt.Printf("\n  [%s] FIRST ERROR: %v\n", v.name, err)
+			}
+			if err == nil {
+				lastSent, lastRecv = sample.bytesSent, sample.bytesRecv
+			}
+			r.Record(sample.elapsed, err)
+		}
+
+		// Handshake size is deterministic per config, so the last successful
+		// sample is representative of every successful handshake.
+		r.HandshakeBytesSent = lastSent
+		r.HandshakeBytesRecv = lastRecv
+		results = append(results, r)
+	}
+
+	// Report the size delta between the two configurations.
+	if len(results) == 2 && results[0].HandshakeBytesSent > 0 && results[1].HandshakeBytesSent > 0 {
+		pqc := results[0].HandshakeBytesSent + results[0].HandshakeBytesRecv
+		classical := results[1].HandshakeBytesSent + results[1].HandshakeBytesRecv
+		fmt.Printf("\n  [Handshake] PQC adds %d bytes vs classical (%d vs %d, %.1fx)\n",
+			pqc-classical, pqc, classical, float64(pqc)/float64(classical))
+	}
+
+	return results
 }
 
 func benchmarkAuth(c *apiClient, iterations int) (*Result, *Result) {
@@ -473,6 +544,60 @@ func benchmarkHealth(c *apiClient, iterations int) *Result {
 	return result
 }
 
+// ─── Artifact sizes ────────────────────────────────────────────────────────────
+
+// ArtifactSizes captures the on-the-wire sizes of the cryptographic material
+// produced by ML-DSA-65 signing. Sizes are reported in raw decoded bytes.
+type ArtifactSizes struct {
+	SignatureBytes int // raw ML-DSA-65 signature length (fixed for the scheme)
+	PublicKeyBytes int // raw DER length of the public key (decoded from PEM)
+	PublicKeyPEM   int // PEM-encoded public key length (as served by the API)
+}
+
+// measureArtifactSizes signs the PDF once and inspects the returned signature
+// and the server public key to report their sizes. Returns an error if either
+// artifact cannot be obtained.
+func measureArtifactSizes(c *apiClient, pdfBytes []byte) (ArtifactSizes, error) {
+	var sizes ArtifactSizes
+
+	// Sign once to obtain a real signature.
+	var buf bytes.Buffer
+	mw := multipart.NewWriter(&buf)
+	fw, _ := mw.CreateFormFile("file", "document.pdf")
+	fw.Write(pdfBytes)
+	mw.Close()
+
+	resp, err := c.do("POST", "/api/documents/sign", &buf, mw.FormDataContentType())
+	if err != nil {
+		return sizes, fmt.Errorf("sign request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	var signResult map[string]any
+	json.NewDecoder(resp.Body).Decode(&signResult)
+	sigB64, _ := signResult["signature"].(string)
+	if sigB64 == "" {
+		return sizes, fmt.Errorf("no signature in sign response: %v", signResult)
+	}
+	sigBytes, err := base64.StdEncoding.DecodeString(sigB64)
+	if err != nil {
+		return sizes, fmt.Errorf("cannot decode signature base64: %w", err)
+	}
+	sizes.SignatureBytes = len(sigBytes)
+
+	// Fetch the public key and measure both its PEM and raw DER size.
+	pubKeyPEM, err := c.getPublicKeyPEM()
+	if err != nil {
+		return sizes, fmt.Errorf("cannot fetch public key: %w", err)
+	}
+	sizes.PublicKeyPEM = len(pubKeyPEM)
+	if block, _ := pem.Decode([]byte(pubKeyPEM)); block != nil {
+		sizes.PublicKeyBytes = len(block.Bytes)
+	}
+
+	return sizes, nil
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 func main() {
@@ -502,7 +627,7 @@ func main() {
 	}
 
 	// ── Register & Login ───────────────────────────────────────────────────
-	fmt.Println("\n[1/6] Setup: register + login")
+	fmt.Println("\n[1/7] Setup: register + login")
 	if err := client.register(); err != nil {
 		log.Printf("  register: %v (may already exist — continuing)", err)
 	}
@@ -515,40 +640,87 @@ func main() {
 	var results []*Result
 
 	// ── Benchmark 1: TLS Handshake ────────────────────────────────────────
-	fmt.Printf("\n[2/6] Benchmarking TLS handshake (%d iterations)…\n", *n)
+	fmt.Printf("\n[2/7] Benchmarking TLS handshake — PQC vs classical (%d iterations)…\n", *n)
 	addr := strings.TrimPrefix(*baseURL, "https://")
-	results = append(results, benchmarkHandshake(addr, *caPath, *n))
+	results = append(results, benchmarkHandshake(addr, *caPath, *n)...)
 
 	// ── Benchmark 2: Auth endpoints ───────────────────────────────────────
-	fmt.Printf("\n[3/6] Benchmarking auth endpoints (%d iterations)…\n", *n)
+	fmt.Printf("\n[3/7] Benchmarking auth endpoints (%d iterations)…\n", *n)
 	loginResult, logoutResult := benchmarkAuth(client, *n)
 	results = append(results, loginResult, logoutResult)
 
 	// ── Benchmark 3: ML-DSA PDF signing ──────────────────────────────────
-	fmt.Printf("\n[4/6] Benchmarking ML-DSA PDF signing (%d iterations)…\n", *n)
+	fmt.Printf("\n[4/7] Benchmarking ML-DSA PDF signing (%d iterations)…\n", *n)
 	results = append(results, benchmarkSign(client, pdfBytes, *n))
 
-	// ── Benchmark 4: Signed PDF download ─────────────────────────────────
-	fmt.Printf("\n[5/6] Benchmarking signed PDF download (%d iterations)…\n", *n)
+	// ── Benchmark 4: ML-DSA signature verification ───────────────────────
+	fmt.Printf("\n[5/7] Benchmarking ML-DSA signature verification (%d iterations)…\n", *n)
+	results = append(results, benchmarkVerify(client, pdfBytes, *n))
+
+	// ── Benchmark 5: Signed PDF download ─────────────────────────────────
+	fmt.Printf("\n[6/7] Benchmarking signed PDF download (%d iterations)…\n", *n)
 	results = append(results, benchmarkDownload(client, pdfBytes, *n))
 
-	// ── Benchmark 5: Admin health ─────────────────────────────────────────
-	fmt.Printf("\n[6/6] Benchmarking admin health endpoint (%d iterations)…\n", *n)
+	// ── Benchmark 6: Admin health ─────────────────────────────────────────
+	fmt.Printf("\n[7/7] Benchmarking admin health endpoint (%d iterations)…\n", *n)
 	results = append(results, benchmarkHealth(client, *n))
+
+	// ── Measure ML-DSA artifact sizes ────────────────────────────────────
+	sizes, err := measureArtifactSizes(client, pdfBytes)
+	if err != nil {
+		log.Printf("  [WARN] Could not measure artifact sizes: %v", err)
+	}
 
 	// ── Print results ──────────────────────────────────────────────────────
 	fmt.Println("\n═══════════════════════════════════════════════════════════════")
-	fmt.Println("  RESULTS")
+	fmt.Println("  RESULTS — timing")
 	fmt.Println("═══════════════════════════════════════════════════════════════")
 	for _, r := range results {
 		r.Print()
 	}
 	fmt.Println("═══════════════════════════════════════════════════════════════")
+	fmt.Println("  RESULTS — ML-DSA-65 artifact sizes")
+	fmt.Println("═══════════════════════════════════════════════════════════════")
+	fmt.Printf("  %-40s  %d bytes\n", "Signature size", sizes.SignatureBytes)
+	fmt.Printf("  %-40s  %d bytes (DER)\n", "Public key size", sizes.PublicKeyBytes)
+	fmt.Printf("  %-40s  %d bytes\n", "Public key size (PEM)", sizes.PublicKeyPEM)
+	fmt.Println("═══════════════════════════════════════════════════════════════")
 
 	// ── Export CSV ──────────────────────────────────────────────────────────
-	csvPath := "results_" + time.Now().Format("20060102_150405") + ".csv"
+	stamp := time.Now().Format("20060102_150405")
+	csvPath := "results_" + stamp + ".csv"
 	exportCSV(csvPath, results)
 	fmt.Printf("\n  CSV exported → %s\n", csvPath)
+
+	sizesPath := "sizes_" + stamp + ".csv"
+	exportSizesCSV(sizesPath, sizes, results)
+	fmt.Printf("  Sizes CSV exported → %s\n", sizesPath)
+}
+
+// exportSizesCSV writes the ML-DSA-65 artifact sizes and the measured TLS
+// handshake sizes to a CSV.
+func exportSizesCSV(path string, sizes ArtifactSizes, results []*Result) {
+	f, err := os.Create(path)
+	if err != nil {
+		log.Printf("Cannot create sizes CSV: %v", err)
+		return
+	}
+	defer f.Close()
+
+	fmt.Fprintln(f, "artifact,bytes")
+	fmt.Fprintf(f, "signature,%d\n", sizes.SignatureBytes)
+	fmt.Fprintf(f, "public_key_der,%d\n", sizes.PublicKeyBytes)
+	fmt.Fprintf(f, "public_key_pem,%d\n", sizes.PublicKeyPEM)
+
+	for _, r := range results {
+		if r.HandshakeBytesSent == 0 && r.HandshakeBytesRecv == 0 {
+			continue
+		}
+		label := strings.ReplaceAll(r.Name, ",", ";")
+		fmt.Fprintf(f, "%s (sent),%d\n", label, r.HandshakeBytesSent)
+		fmt.Fprintf(f, "%s (recv),%d\n", label, r.HandshakeBytesRecv)
+		fmt.Fprintf(f, "%s (total),%d\n", label, r.HandshakeBytesSent+r.HandshakeBytesRecv)
+	}
 }
 
 // exportCSV writes every raw sample to a CSV for further analysis in Python/R.

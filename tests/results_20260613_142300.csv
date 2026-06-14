@@ -1,0 +1,601 @@
+benchmark,iteration,duration_us
+TLS Handshake (X25519MLKEM768 PQC),1,1881
+TLS Handshake (X25519MLKEM768 PQC),2,1628
+TLS Handshake (X25519MLKEM768 PQC),3,1944
+TLS Handshake (X25519MLKEM768 PQC),4,1823
+TLS Handshake (X25519MLKEM768 PQC),5,2226
+TLS Handshake (X25519MLKEM768 PQC),6,1821
+TLS Handshake (X25519MLKEM768 PQC),7,1822
+TLS Handshake (X25519MLKEM768 PQC),8,1724
+TLS Handshake (X25519MLKEM768 PQC),9,1631
+TLS Handshake (X25519MLKEM768 PQC),10,1578
+TLS Handshake (X25519MLKEM768 PQC),11,1889
+TLS Handshake (X25519MLKEM768 PQC),12,1496
+TLS Handshake (X25519MLKEM768 PQC),13,1868
+TLS Handshake (X25519MLKEM768 PQC),14,1583
+TLS Handshake (X25519MLKEM768 PQC),15,1883
+TLS Handshake (X25519MLKEM768 PQC),16,1584
+TLS Handshake (X25519MLKEM768 PQC),17,1992
+TLS Handshake (X25519MLKEM768 PQC),18,1690
+TLS Handshake (X25519MLKEM768 PQC),19,1801
+TLS Handshake (X25519MLKEM768 PQC),20,1720
+TLS Handshake (X25519MLKEM768 PQC),21,1616
+TLS Handshake (X25519MLKEM768 PQC),22,2349
+TLS Handshake (X25519MLKEM768 PQC),23,1735
+TLS Handshake (X25519MLKEM768 PQC),24,1858
+TLS Handshake (X25519MLKEM768 PQC),25,1753
+TLS Handshake (X25519MLKEM768 PQC),26,1554
+TLS Handshake (X25519MLKEM768 PQC),27,1729
+TLS Handshake (X25519MLKEM768 PQC),28,1528
+TLS Handshake (X25519MLKEM768 PQC),29,2548
+TLS Handshake (X25519MLKEM768 PQC),30,1528
+TLS Handshake (X25519MLKEM768 PQC),31,1632
+TLS Handshake (X25519MLKEM768 PQC),32,2103
+TLS Handshake (X25519MLKEM768 PQC),33,3127
+TLS Handshake (X25519MLKEM768 PQC),34,2366
+TLS Handshake (X25519MLKEM768 PQC),35,1601
+TLS Handshake (X25519MLKEM768 PQC),36,2066
+TLS Handshake (X25519MLKEM768 PQC),37,1701
+TLS Handshake (X25519MLKEM768 PQC),38,1713
+TLS Handshake (X25519MLKEM768 PQC),39,1621
+TLS Handshake (X25519MLKEM768 PQC),40,1771
+TLS Handshake (X25519MLKEM768 PQC),41,1927
+TLS Handshake (X25519MLKEM768 PQC),42,9134
+TLS Handshake (X25519MLKEM768 PQC),43,2033
+TLS Handshake (X25519MLKEM768 PQC),44,1881
+TLS Handshake (X25519MLKEM768 PQC),45,2372
+TLS Handshake (X25519MLKEM768 PQC),46,2134
+TLS Handshake (X25519MLKEM768 PQC),47,1667
+TLS Handshake (X25519MLKEM768 PQC),48,1686
+TLS Handshake (X25519MLKEM768 PQC),49,1979
+TLS Handshake (X25519MLKEM768 PQC),50,1482
+TLS Handshake (X25519MLKEM768 PQC),51,1530
+TLS Handshake (X25519MLKEM768 PQC),52,1560
+TLS Handshake (X25519MLKEM768 PQC),53,1674
+TLS Handshake (X25519MLKEM768 PQC),54,1516
+TLS Handshake (X25519MLKEM768 PQC),55,1683
+TLS Handshake (X25519MLKEM768 PQC),56,1590
+TLS Handshake (X25519MLKEM768 PQC),57,1380
+TLS Handshake (X25519MLKEM768 PQC),58,1619
+TLS Handshake (X25519MLKEM768 PQC),59,1512
+TLS Handshake (X25519MLKEM768 PQC),60,2109
+TLS Handshake (X25519MLKEM768 PQC),61,1523
+TLS Handshake (X25519MLKEM768 PQC),62,1509
+TLS Handshake (X25519MLKEM768 PQC),63,9915
+TLS Handshake (X25519MLKEM768 PQC),64,4926
+TLS Handshake (X25519MLKEM768 PQC),65,1604
+TLS Handshake (X25519MLKEM768 PQC),66,1339
+TLS Handshake (X25519MLKEM768 PQC),67,1642
+TLS Handshake (X25519MLKEM768 PQC),68,1693
+TLS Handshake (X25519MLKEM768 PQC),69,1889
+TLS Handshake (X25519MLKEM768 PQC),70,2288
+TLS Handshake (X25519MLKEM768 PQC),71,1652
+TLS Handshake (X25519MLKEM768 PQC),72,1572
+TLS Handshake (X25519MLKEM768 PQC),73,2097
+TLS Handshake (X25519MLKEM768 PQC),74,1612
+TLS Handshake (X25519MLKEM768 PQC),75,1746
+TLS Handshake (X25519MLKEM768 PQC),76,1610
+TLS Handshake (X25519MLKEM768 PQC),77,1670
+TLS Handshake (X25519MLKEM768 PQC),78,1638
+TLS Handshake (X25519MLKEM768 PQC),79,2271
+TLS Handshake (X25519MLKEM768 PQC),80,1585
+TLS Handshake (X25519MLKEM768 PQC),81,1550
+TLS Handshake (X25519MLKEM768 PQC),82,1568
+TLS Handshake (X25519MLKEM768 PQC),83,1335
+TLS Handshake (X25519MLKEM768 PQC),84,1496
+TLS Handshake (X25519MLKEM768 PQC),85,14429
+TLS Handshake (X25519MLKEM768 PQC),86,2293
+TLS Handshake (X25519MLKEM768 PQC),87,1600
+TLS Handshake (X25519MLKEM768 PQC),88,7590
+TLS Handshake (X25519MLKEM768 PQC),89,1666
+TLS Handshake (X25519MLKEM768 PQC),90,1630
+TLS Handshake (X25519MLKEM768 PQC),91,1444
+TLS Handshake (X25519MLKEM768 PQC),92,1520
+TLS Handshake (X25519MLKEM768 PQC),93,1659
+TLS Handshake (X25519MLKEM768 PQC),94,1664
+TLS Handshake (X25519MLKEM768 PQC),95,1532
+TLS Handshake (X25519MLKEM768 PQC),96,1785
+TLS Handshake (X25519MLKEM768 PQC),97,1485
+TLS Handshake (X25519MLKEM768 PQC),98,1621
+TLS Handshake (X25519MLKEM768 PQC),99,1767
+TLS Handshake (X25519MLKEM768 PQC),100,1619
+TLS Handshake (X25519 classical),1,1251
+TLS Handshake (X25519 classical),2,1204
+TLS Handshake (X25519 classical),3,1494
+TLS Handshake (X25519 classical),4,1502
+TLS Handshake (X25519 classical),5,1786
+TLS Handshake (X25519 classical),6,1174
+TLS Handshake (X25519 classical),7,1283
+TLS Handshake (X25519 classical),8,1352
+TLS Handshake (X25519 classical),9,1238
+TLS Handshake (X25519 classical),10,1680
+TLS Handshake (X25519 classical),11,1427
+TLS Handshake (X25519 classical),12,1203
+TLS Handshake (X25519 classical),13,1527
+TLS Handshake (X25519 classical),14,1536
+TLS Handshake (X25519 classical),15,1474
+TLS Handshake (X25519 classical),16,1471
+TLS Handshake (X25519 classical),17,1309
+TLS Handshake (X25519 classical),18,2336
+TLS Handshake (X25519 classical),19,1246
+TLS Handshake (X25519 classical),20,1497
+TLS Handshake (X25519 classical),21,1226
+TLS Handshake (X25519 classical),22,1225
+TLS Handshake (X25519 classical),23,1383
+TLS Handshake (X25519 classical),24,1237
+TLS Handshake (X25519 classical),25,1308
+TLS Handshake (X25519 classical),26,1478
+TLS Handshake (X25519 classical),27,1448
+TLS Handshake (X25519 classical),28,1122
+TLS Handshake (X25519 classical),29,1200
+TLS Handshake (X25519 classical),30,1313
+TLS Handshake (X25519 classical),31,1473
+TLS Handshake (X25519 classical),32,1272
+TLS Handshake (X25519 classical),33,1419
+TLS Handshake (X25519 classical),34,1174
+TLS Handshake (X25519 classical),35,1232
+TLS Handshake (X25519 classical),36,1228
+TLS Handshake (X25519 classical),37,1337
+TLS Handshake (X25519 classical),38,1591
+TLS Handshake (X25519 classical),39,1501
+TLS Handshake (X25519 classical),40,1353
+TLS Handshake (X25519 classical),41,1310
+TLS Handshake (X25519 classical),42,1252
+TLS Handshake (X25519 classical),43,1144
+TLS Handshake (X25519 classical),44,1507
+TLS Handshake (X25519 classical),45,1210
+TLS Handshake (X25519 classical),46,1379
+TLS Handshake (X25519 classical),47,1620
+TLS Handshake (X25519 classical),48,1725
+TLS Handshake (X25519 classical),49,1263
+TLS Handshake (X25519 classical),50,1228
+TLS Handshake (X25519 classical),51,1333
+TLS Handshake (X25519 classical),52,1681
+TLS Handshake (X25519 classical),53,1251
+TLS Handshake (X25519 classical),54,1645
+TLS Handshake (X25519 classical),55,1240
+TLS Handshake (X25519 classical),56,1573
+TLS Handshake (X25519 classical),57,1312
+TLS Handshake (X25519 classical),58,1229
+TLS Handshake (X25519 classical),59,1154
+TLS Handshake (X25519 classical),60,1364
+TLS Handshake (X25519 classical),61,1623
+TLS Handshake (X25519 classical),62,1234
+TLS Handshake (X25519 classical),63,1058
+TLS Handshake (X25519 classical),64,1238
+TLS Handshake (X25519 classical),65,1263
+TLS Handshake (X25519 classical),66,1282
+TLS Handshake (X25519 classical),67,1477
+TLS Handshake (X25519 classical),68,1284
+TLS Handshake (X25519 classical),69,1260
+TLS Handshake (X25519 classical),70,1363
+TLS Handshake (X25519 classical),71,1175
+TLS Handshake (X25519 classical),72,1343
+TLS Handshake (X25519 classical),73,1286
+TLS Handshake (X25519 classical),74,1344
+TLS Handshake (X25519 classical),75,1281
+TLS Handshake (X25519 classical),76,1273
+TLS Handshake (X25519 classical),77,1356
+TLS Handshake (X25519 classical),78,1311
+TLS Handshake (X25519 classical),79,1273
+TLS Handshake (X25519 classical),80,1222
+TLS Handshake (X25519 classical),81,1235
+TLS Handshake (X25519 classical),82,1379
+TLS Handshake (X25519 classical),83,1217
+TLS Handshake (X25519 classical),84,1270
+TLS Handshake (X25519 classical),85,1400
+TLS Handshake (X25519 classical),86,1304
+TLS Handshake (X25519 classical),87,1225
+TLS Handshake (X25519 classical),88,1394
+TLS Handshake (X25519 classical),89,1130
+TLS Handshake (X25519 classical),90,1244
+TLS Handshake (X25519 classical),91,1285
+TLS Handshake (X25519 classical),92,1110
+TLS Handshake (X25519 classical),93,1616
+TLS Handshake (X25519 classical),94,1205
+TLS Handshake (X25519 classical),95,1414
+TLS Handshake (X25519 classical),96,1251
+TLS Handshake (X25519 classical),97,1196
+TLS Handshake (X25519 classical),98,1274
+TLS Handshake (X25519 classical),99,1475
+TLS Handshake (X25519 classical),100,1280
+POST /auth/login,1,158401
+POST /auth/login,2,121963
+POST /auth/login,3,123782
+POST /auth/login,4,122089
+POST /auth/login,5,121972
+POST /auth/login,6,155598
+POST /auth/login,7,149406
+POST /auth/login,8,122520
+POST /auth/login,9,122118
+POST /auth/login,10,129594
+POST /auth/login,11,126714
+POST /auth/login,12,125177
+POST /auth/login,13,122867
+POST /auth/login,14,121338
+POST /auth/login,15,124196
+POST /auth/login,16,121021
+POST /auth/login,17,121617
+POST /auth/login,18,124345
+POST /auth/login,19,126930
+POST /auth/login,20,120333
+POST /auth/login,21,121193
+POST /auth/login,22,128711
+POST /auth/login,23,136553
+POST /auth/login,24,120858
+POST /auth/login,25,124801
+POST /auth/login,26,122425
+POST /auth/login,27,121869
+POST /auth/login,28,122321
+POST /auth/login,29,121521
+POST /auth/login,30,123955
+POST /auth/login,31,119080
+POST /auth/login,32,146237
+POST /auth/login,33,119833
+POST /auth/login,34,123208
+POST /auth/login,35,121842
+POST /auth/login,36,120265
+POST /auth/login,37,120179
+POST /auth/login,38,122058
+POST /auth/login,39,118818
+POST /auth/login,40,124957
+POST /auth/login,41,119810
+POST /auth/login,42,122355
+POST /auth/login,43,121148
+POST /auth/login,44,120630
+POST /auth/login,45,122429
+POST /auth/login,46,122616
+POST /auth/login,47,127326
+POST /auth/login,48,119698
+POST /auth/login,49,120163
+POST /auth/login,50,122491
+POST /auth/login,51,121257
+POST /auth/login,52,120542
+POST /auth/login,53,118820
+POST /auth/login,54,120618
+POST /auth/login,55,121290
+POST /auth/login,56,121381
+POST /auth/login,57,119286
+POST /auth/login,58,120200
+POST /auth/login,59,122875
+POST /auth/login,60,122921
+POST /auth/login,61,120236
+POST /auth/login,62,121591
+POST /auth/login,63,125840
+POST /auth/login,64,124825
+POST /auth/login,65,121537
+POST /auth/login,66,120580
+POST /auth/login,67,120885
+POST /auth/login,68,121013
+POST /auth/login,69,121681
+POST /auth/login,70,121145
+POST /auth/login,71,121256
+POST /auth/login,72,120912
+POST /auth/login,73,121801
+POST /auth/login,74,121540
+POST /auth/login,75,121099
+POST /auth/login,76,121938
+POST /auth/login,77,120792
+POST /auth/login,78,121969
+POST /auth/login,79,123163
+POST /auth/login,80,121757
+POST /auth/login,81,121326
+POST /auth/login,82,122996
+POST /auth/login,83,122270
+POST /auth/login,84,121341
+POST /auth/login,85,138794
+POST /auth/login,86,122681
+POST /auth/login,87,122011
+POST /auth/login,88,123354
+POST /auth/login,89,125624
+POST /auth/login,90,123098
+POST /auth/login,91,121621
+POST /auth/login,92,119443
+POST /auth/login,93,120762
+POST /auth/login,94,122491
+POST /auth/login,95,121231
+POST /auth/login,96,121257
+POST /auth/login,97,119630
+POST /auth/login,98,128834
+POST /auth/login,99,138739
+POST /auth/login,100,142955
+POST /api/documents/sign (ML-DSA),1,25023
+POST /api/documents/sign (ML-DSA),2,6962
+POST /api/documents/sign (ML-DSA),3,8575
+POST /api/documents/sign (ML-DSA),4,6850
+POST /api/documents/sign (ML-DSA),5,7395
+POST /api/documents/sign (ML-DSA),6,7111
+POST /api/documents/sign (ML-DSA),7,7232
+POST /api/documents/sign (ML-DSA),8,7234
+POST /api/documents/sign (ML-DSA),9,8489
+POST /api/documents/sign (ML-DSA),10,7413
+POST /api/documents/sign (ML-DSA),11,8151
+POST /api/documents/sign (ML-DSA),12,6623
+POST /api/documents/sign (ML-DSA),13,7496
+POST /api/documents/sign (ML-DSA),14,7365
+POST /api/documents/sign (ML-DSA),15,8418
+POST /api/documents/sign (ML-DSA),16,6635
+POST /api/documents/sign (ML-DSA),17,7138
+POST /api/documents/sign (ML-DSA),18,7496
+POST /api/documents/sign (ML-DSA),19,8085
+POST /api/documents/sign (ML-DSA),20,7023
+POST /api/documents/sign (ML-DSA),21,7225
+POST /api/documents/sign (ML-DSA),22,7766
+POST /api/documents/sign (ML-DSA),23,7765
+POST /api/documents/sign (ML-DSA),24,6734
+POST /api/documents/sign (ML-DSA),25,8367
+POST /api/documents/sign (ML-DSA),26,8200
+POST /api/documents/sign (ML-DSA),27,6922
+POST /api/documents/sign (ML-DSA),28,7866
+POST /api/documents/sign (ML-DSA),29,7666
+POST /api/documents/sign (ML-DSA),30,7928
+POST /api/documents/sign (ML-DSA),31,6810
+POST /api/documents/sign (ML-DSA),32,7159
+POST /api/documents/sign (ML-DSA),33,7584
+POST /api/documents/sign (ML-DSA),34,7977
+POST /api/documents/sign (ML-DSA),35,7297
+POST /api/documents/sign (ML-DSA),36,7466
+POST /api/documents/sign (ML-DSA),37,7420
+POST /api/documents/sign (ML-DSA),38,7908
+POST /api/documents/sign (ML-DSA),39,15429
+POST /api/documents/sign (ML-DSA),40,10287
+POST /api/documents/sign (ML-DSA),41,7406
+POST /api/documents/sign (ML-DSA),42,7557
+POST /api/documents/sign (ML-DSA),43,7457
+POST /api/documents/sign (ML-DSA),44,10217
+POST /api/documents/sign (ML-DSA),45,9739
+POST /api/documents/sign (ML-DSA),46,12144
+POST /api/documents/sign (ML-DSA),47,8621
+POST /api/documents/sign (ML-DSA),48,7655
+POST /api/documents/sign (ML-DSA),49,7064
+POST /api/documents/sign (ML-DSA),50,7848
+POST /api/documents/sign (ML-DSA),51,6682
+POST /api/documents/sign (ML-DSA),52,7262
+POST /api/documents/sign (ML-DSA),53,7267
+POST /api/documents/sign (ML-DSA),54,7244
+POST /api/documents/sign (ML-DSA),55,6903
+POST /api/documents/sign (ML-DSA),56,8286
+POST /api/documents/sign (ML-DSA),57,7075
+POST /api/documents/sign (ML-DSA),58,7862
+POST /api/documents/sign (ML-DSA),59,7929
+POST /api/documents/sign (ML-DSA),60,7523
+POST /api/documents/sign (ML-DSA),61,8134
+POST /api/documents/sign (ML-DSA),62,7510
+POST /api/documents/sign (ML-DSA),63,7441
+POST /api/documents/sign (ML-DSA),64,7927
+POST /api/documents/sign (ML-DSA),65,7109
+POST /api/documents/sign (ML-DSA),66,6729
+POST /api/documents/sign (ML-DSA),67,7353
+POST /api/documents/sign (ML-DSA),68,7339
+POST /api/documents/sign (ML-DSA),69,7401
+POST /api/documents/sign (ML-DSA),70,6883
+POST /api/documents/sign (ML-DSA),71,7327
+POST /api/documents/sign (ML-DSA),72,6835
+POST /api/documents/sign (ML-DSA),73,7005
+POST /api/documents/sign (ML-DSA),74,6360
+POST /api/documents/sign (ML-DSA),75,7586
+POST /api/documents/sign (ML-DSA),76,7362
+POST /api/documents/sign (ML-DSA),77,7920
+POST /api/documents/sign (ML-DSA),78,6370
+POST /api/documents/sign (ML-DSA),79,7042
+POST /api/documents/sign (ML-DSA),80,6860
+POST /api/documents/sign (ML-DSA),81,7569
+POST /api/documents/sign (ML-DSA),82,6930
+POST /api/documents/sign (ML-DSA),83,7242
+POST /api/documents/sign (ML-DSA),84,7510
+POST /api/documents/sign (ML-DSA),85,7801
+POST /api/documents/sign (ML-DSA),86,7128
+POST /api/documents/sign (ML-DSA),87,7891
+POST /api/documents/sign (ML-DSA),88,7240
+POST /api/documents/sign (ML-DSA),89,8322
+POST /api/documents/sign (ML-DSA),90,8249
+POST /api/documents/sign (ML-DSA),91,7395
+POST /api/documents/sign (ML-DSA),92,7246
+POST /api/documents/sign (ML-DSA),93,7140
+POST /api/documents/sign (ML-DSA),94,7551
+POST /api/documents/sign (ML-DSA),95,7190
+POST /api/documents/sign (ML-DSA),96,7016
+POST /api/documents/sign (ML-DSA),97,7100
+POST /api/documents/sign (ML-DSA),98,7155
+POST /api/documents/sign (ML-DSA),99,7008
+POST /api/documents/sign (ML-DSA),100,7433
+POST /api/documents/verify (ML-DSA),1,924
+POST /api/documents/verify (ML-DSA),2,809
+POST /api/documents/verify (ML-DSA),3,869
+POST /api/documents/verify (ML-DSA),4,785
+POST /api/documents/verify (ML-DSA),5,763
+POST /api/documents/verify (ML-DSA),6,644
+POST /api/documents/verify (ML-DSA),7,901
+POST /api/documents/verify (ML-DSA),8,629
+POST /api/documents/verify (ML-DSA),9,1097
+POST /api/documents/verify (ML-DSA),10,750
+POST /api/documents/verify (ML-DSA),11,854
+POST /api/documents/verify (ML-DSA),12,918
+POST /api/documents/verify (ML-DSA),13,703
+POST /api/documents/verify (ML-DSA),14,815
+POST /api/documents/verify (ML-DSA),15,683
+POST /api/documents/verify (ML-DSA),16,591
+POST /api/documents/verify (ML-DSA),17,524
+POST /api/documents/verify (ML-DSA),18,715
+POST /api/documents/verify (ML-DSA),19,601
+POST /api/documents/verify (ML-DSA),20,715
+POST /api/documents/verify (ML-DSA),21,820
+POST /api/documents/verify (ML-DSA),22,998
+POST /api/documents/verify (ML-DSA),23,1351
+POST /api/documents/verify (ML-DSA),24,929
+POST /api/documents/verify (ML-DSA),25,635
+POST /api/documents/verify (ML-DSA),26,550
+POST /api/documents/verify (ML-DSA),27,672
+POST /api/documents/verify (ML-DSA),28,872
+POST /api/documents/verify (ML-DSA),29,702
+POST /api/documents/verify (ML-DSA),30,646
+POST /api/documents/verify (ML-DSA),31,700
+POST /api/documents/verify (ML-DSA),32,608
+POST /api/documents/verify (ML-DSA),33,565
+POST /api/documents/verify (ML-DSA),34,800
+POST /api/documents/verify (ML-DSA),35,807
+POST /api/documents/verify (ML-DSA),36,631
+POST /api/documents/verify (ML-DSA),37,638
+POST /api/documents/verify (ML-DSA),38,906
+POST /api/documents/verify (ML-DSA),39,583
+POST /api/documents/verify (ML-DSA),40,1105
+POST /api/documents/verify (ML-DSA),41,870
+POST /api/documents/verify (ML-DSA),42,531
+POST /api/documents/verify (ML-DSA),43,598
+POST /api/documents/verify (ML-DSA),44,490
+POST /api/documents/verify (ML-DSA),45,515
+POST /api/documents/verify (ML-DSA),46,572
+POST /api/documents/verify (ML-DSA),47,1501
+POST /api/documents/verify (ML-DSA),48,1238
+POST /api/documents/verify (ML-DSA),49,519
+POST /api/documents/verify (ML-DSA),50,540
+POST /api/documents/verify (ML-DSA),51,509
+POST /api/documents/verify (ML-DSA),52,508
+POST /api/documents/verify (ML-DSA),53,673
+POST /api/documents/verify (ML-DSA),54,890
+POST /api/documents/verify (ML-DSA),55,667
+POST /api/documents/verify (ML-DSA),56,874
+POST /api/documents/verify (ML-DSA),57,484
+POST /api/documents/verify (ML-DSA),58,466
+POST /api/documents/verify (ML-DSA),59,488
+POST /api/documents/verify (ML-DSA),60,946
+POST /api/documents/verify (ML-DSA),61,635
+POST /api/documents/verify (ML-DSA),62,539
+POST /api/documents/verify (ML-DSA),63,546
+POST /api/documents/verify (ML-DSA),64,492
+POST /api/documents/verify (ML-DSA),65,478
+POST /api/documents/verify (ML-DSA),66,487
+POST /api/documents/verify (ML-DSA),67,885
+POST /api/documents/verify (ML-DSA),68,553
+POST /api/documents/verify (ML-DSA),69,895
+POST /api/documents/verify (ML-DSA),70,632
+POST /api/documents/verify (ML-DSA),71,964
+POST /api/documents/verify (ML-DSA),72,644
+POST /api/documents/verify (ML-DSA),73,848
+POST /api/documents/verify (ML-DSA),74,721
+POST /api/documents/verify (ML-DSA),75,860
+POST /api/documents/verify (ML-DSA),76,621
+POST /api/documents/verify (ML-DSA),77,778
+POST /api/documents/verify (ML-DSA),78,532
+POST /api/documents/verify (ML-DSA),79,554
+POST /api/documents/verify (ML-DSA),80,539
+POST /api/documents/verify (ML-DSA),81,762
+POST /api/documents/verify (ML-DSA),82,538
+POST /api/documents/verify (ML-DSA),83,611
+POST /api/documents/verify (ML-DSA),84,599
+POST /api/documents/verify (ML-DSA),85,634
+POST /api/documents/verify (ML-DSA),86,897
+POST /api/documents/verify (ML-DSA),87,699
+POST /api/documents/verify (ML-DSA),88,664
+POST /api/documents/verify (ML-DSA),89,670
+POST /api/documents/verify (ML-DSA),90,567
+POST /api/documents/verify (ML-DSA),91,648
+POST /api/documents/verify (ML-DSA),92,526
+POST /api/documents/verify (ML-DSA),93,542
+POST /api/documents/verify (ML-DSA),94,729
+POST /api/documents/verify (ML-DSA),95,550
+POST /api/documents/verify (ML-DSA),96,564
+POST /api/documents/verify (ML-DSA),97,520
+POST /api/documents/verify (ML-DSA),98,548
+POST /api/documents/verify (ML-DSA),99,1028
+POST /api/documents/verify (ML-DSA),100,762
+GET /documents/{id}/download,1,6356
+GET /documents/{id}/download,2,3845
+GET /documents/{id}/download,3,4165
+GET /documents/{id}/download,4,3320
+GET /documents/{id}/download,5,3576
+GET /documents/{id}/download,6,3609
+GET /documents/{id}/download,7,3688
+GET /documents/{id}/download,8,4030
+GET /documents/{id}/download,9,3416
+GET /documents/{id}/download,10,3893
+GET /documents/{id}/download,11,3281
+GET /documents/{id}/download,12,2944
+GET /documents/{id}/download,13,4113
+GET /documents/{id}/download,14,2954
+GET /documents/{id}/download,15,2985
+GET /documents/{id}/download,16,3425
+GET /documents/{id}/download,17,3314
+GET /documents/{id}/download,18,3349
+GET /documents/{id}/download,19,3443
+GET /documents/{id}/download,20,2963
+GET /documents/{id}/download,21,3641
+GET /documents/{id}/download,22,3579
+GET /documents/{id}/download,23,3117
+GET /documents/{id}/download,24,3460
+GET /documents/{id}/download,25,3737
+GET /documents/{id}/download,26,3327
+GET /documents/{id}/download,27,4137
+GET /documents/{id}/download,28,2973
+GET /documents/{id}/download,29,3802
+GET /documents/{id}/download,30,3508
+GET /documents/{id}/download,31,3062
+GET /documents/{id}/download,32,3522
+GET /documents/{id}/download,33,3099
+GET /documents/{id}/download,34,3152
+GET /documents/{id}/download,35,3694
+GET /documents/{id}/download,36,3336
+GET /documents/{id}/download,37,3022
+GET /documents/{id}/download,38,4096
+GET /documents/{id}/download,39,2941
+GET /documents/{id}/download,40,2993
+GET /documents/{id}/download,41,3569
+GET /documents/{id}/download,42,3273
+GET /documents/{id}/download,43,3153
+GET /documents/{id}/download,44,3608
+GET /documents/{id}/download,45,2946
+GET /documents/{id}/download,46,3190
+GET /documents/{id}/download,47,3795
+GET /documents/{id}/download,48,3001
+GET /documents/{id}/download,49,3639
+GET /documents/{id}/download,50,3298
+GET /documents/{id}/download,51,3278
+GET /documents/{id}/download,52,3611
+GET /documents/{id}/download,53,3045
+GET /documents/{id}/download,54,3095
+GET /documents/{id}/download,55,4086
+GET /documents/{id}/download,56,3405
+GET /documents/{id}/download,57,2977
+GET /documents/{id}/download,58,3464
+GET /documents/{id}/download,59,3347
+GET /documents/{id}/download,60,4132
+GET /documents/{id}/download,61,3565
+GET /documents/{id}/download,62,3508
+GET /documents/{id}/download,63,3627
+GET /documents/{id}/download,64,3576
+GET /documents/{id}/download,65,3461
+GET /documents/{id}/download,66,3265
+GET /documents/{id}/download,67,3414
+GET /documents/{id}/download,68,3620
+GET /documents/{id}/download,69,3078
+GET /documents/{id}/download,70,3234
+GET /documents/{id}/download,71,3442
+GET /documents/{id}/download,72,3086
+GET /documents/{id}/download,73,3120
+GET /documents/{id}/download,74,3272
+GET /documents/{id}/download,75,3215
+GET /documents/{id}/download,76,3003
+GET /documents/{id}/download,77,3958
+GET /documents/{id}/download,78,3284
+GET /documents/{id}/download,79,3000
+GET /documents/{id}/download,80,3589
+GET /documents/{id}/download,81,2998
+GET /documents/{id}/download,82,3390
+GET /documents/{id}/download,83,4130
+GET /documents/{id}/download,84,3016
+GET /documents/{id}/download,85,3344
+GET /documents/{id}/download,86,3568
+GET /documents/{id}/download,87,3338
+GET /documents/{id}/download,88,3553
+GET /documents/{id}/download,89,3243
+GET /documents/{id}/download,90,3042
+GET /documents/{id}/download,91,3543
+GET /documents/{id}/download,92,3074
+GET /documents/{id}/download,93,3006
+GET /documents/{id}/download,94,3586
+GET /documents/{id}/download,95,3375
+GET /documents/{id}/download,96,3315
+GET /documents/{id}/download,97,3698
+GET /documents/{id}/download,98,3169
+GET /documents/{id}/download,99,3339
+GET /documents/{id}/download,100,3360
