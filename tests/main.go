@@ -30,9 +30,13 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -45,6 +49,21 @@ var (
 	n        = flag.Int("n", 100, "Number of iterations for each benchmark")
 	username = flag.String("user", "testuser_harness", "Test username")
 	password = flag.String("pass", "testpass123!", "Test password")
+
+	// Resource-measurement flags. The handshake benchmark can drive concurrent
+	// workers and sample the server container's CPU/memory via cgroup counters,
+	// so the post-quantum TLS cost can be attributed precisely.
+	concurrency = flag.Int("concurrency", 1, "Concurrent workers for the TLS handshake benchmark (1 = sequential)")
+	container   = flag.String("container", "pqc_api", "Docker container name of the API server (for CPU/mem sampling via cgroup)")
+	// When running the harness inside WSL while Docker runs on the Windows host,
+	// the docker CLI may only be reachable as "docker.exe" via WSL interop. Set
+	// -docker docker.exe in that case.
+	dockerCmd = flag.String("docker", "docker", "Docker CLI to invoke for cgroup sampling (e.g. docker.exe from WSL)")
+	// Interleaving alternates PQC/classical handshakes in small blocks so both
+	// configs see identical background load — the CPU delta then cancels drift
+	// instead of comparing two separate multi-second windows.
+	interleave = flag.Bool("interleave", true, "Interleave PQC/classical handshakes in alternating blocks (cancels background CPU drift)")
+	block      = flag.Int("block", 50, "Handshakes per block when interleaving (larger = less docker-exec overhead, coarser interleaving)")
 )
 
 // MEtrics
@@ -201,6 +220,137 @@ func measureHandshake(addr, caPath string, curves []tls.CurveID) (handshakeSampl
 	return sample, nil
 }
 
+// ─── Resource Sampling (server CPU / memory via cgroup) ─────────────────────────
+
+// ResourceMetrics captures the server container's CPU and memory consumption
+// during one handshake batch. CPU is a cumulative delta read from the cgroup
+// (true CPU-seconds the server burned), memory is the peak observed during the
+// batch minus the baseline. These let us attribute cost to the key-exchange
+// algorithm by comparing the PQC variant against the classical one.
+type ResourceMetrics struct {
+	Name         string
+	Iterations   int
+	Concurrency  int
+	OKCount      int   // successful handshakes (denominator for per-handshake cost)
+	CPUUsecDelta int64 // total server CPU microseconds consumed during the batch
+	MemBefore    int64 // container memory at batch start (bytes)
+	MemPeak      int64 // peak container memory during the batch (bytes)
+	OK           bool  // false if cgroup counters could not be read
+}
+
+// dockerExecCat cats a file inside the target container. Returns ok=false if
+// docker is unavailable, the container isn't running, or the path is missing.
+func dockerExecCat(container, path string) (string, bool) {
+	out, err := exec.Command(*dockerCmd, "exec", container, "cat", path).Output()
+	if err != nil {
+		return "", false
+	}
+	return string(out), true
+}
+
+// readCPUUsec returns the container's cumulative CPU usage in microseconds.
+// Tries cgroup v2 (cpu.stat → usage_usec) first, then falls back to cgroup v1
+// (cpuacct.usage, in nanoseconds).
+func readCPUUsec(container string) (int64, bool) {
+	if s, ok := dockerExecCat(container, "/sys/fs/cgroup/cpu.stat"); ok {
+		for _, line := range strings.Split(s, "\n") {
+			f := strings.Fields(line)
+			if len(f) == 2 && f[0] == "usage_usec" {
+				if v, err := strconv.ParseInt(f[1], 10, 64); err == nil {
+					return v, true
+				}
+			}
+		}
+	}
+	if s, ok := dockerExecCat(container, "/sys/fs/cgroup/cpuacct/cpuacct.usage"); ok {
+		if v, err := strconv.ParseInt(strings.TrimSpace(s), 10, 64); err == nil {
+			return v / 1000, true // ns → us
+		}
+	}
+	return 0, false
+}
+
+// readMemCurrent returns the container's current memory usage in bytes.
+// Tries cgroup v2 (memory.current) first, then cgroup v1 (memory.usage_in_bytes).
+func readMemCurrent(container string) (int64, bool) {
+	if s, ok := dockerExecCat(container, "/sys/fs/cgroup/memory.current"); ok {
+		if v, err := strconv.ParseInt(strings.TrimSpace(s), 10, 64); err == nil {
+			return v, true
+		}
+	}
+	if s, ok := dockerExecCat(container, "/sys/fs/cgroup/memory/memory.usage_in_bytes"); ok {
+		if v, err := strconv.ParseInt(strings.TrimSpace(s), 10, 64); err == nil {
+			return v, true
+		}
+	}
+	return 0, false
+}
+
+// sampleMemPeak polls the container memory every 20ms until stop is closed,
+// then sends the peak observed value on done.
+func sampleMemPeak(container string, stop <-chan struct{}, done chan<- int64) {
+	var peak int64
+	t := time.NewTicker(20 * time.Millisecond)
+	defer t.Stop()
+	for {
+		select {
+		case <-stop:
+			done <- peak
+			return
+		case <-t.C:
+			if m, ok := readMemCurrent(container); ok && m > peak {
+				peak = m
+			}
+		}
+	}
+}
+
+// runHandshakes drives `iterations` fresh handshakes across `concurrency`
+// workers, all pinned to `curves`. Returns the per-handshake latency samples,
+// the failure count, the first error seen (if any), and the on-the-wire byte
+// counts from the last successful handshake (deterministic per config).
+func runHandshakes(addr, caPath string, curves []tls.CurveID, iterations, concurrency int) (samples []time.Duration, failures int, firstErr error, lastSent, lastRecv int64) {
+	type res struct {
+		sample handshakeSample
+		err    error
+	}
+	if concurrency < 1 {
+		concurrency = 1
+	}
+	jobs := make(chan struct{}, iterations)
+	out := make(chan res, iterations)
+
+	var wg sync.WaitGroup
+	for w := 0; w < concurrency; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for range jobs {
+				s, err := measureHandshake(addr, caPath, curves)
+				out <- res{s, err}
+			}
+		}()
+	}
+	for i := 0; i < iterations; i++ {
+		jobs <- struct{}{}
+	}
+	close(jobs)
+	go func() { wg.Wait(); close(out) }()
+
+	for r := range out {
+		if r.err != nil {
+			failures++
+			if firstErr == nil {
+				firstErr = r.err
+			}
+			continue
+		}
+		samples = append(samples, r.sample.elapsed)
+		lastSent, lastRecv = r.sample.bytesSent, r.sample.bytesRecv
+	}
+	return samples, failures, firstErr, lastSent, lastRecv
+}
+
 // ─── API Helpers ──────────────────────────────────────────────────────────────
 
 type apiClient struct {
@@ -274,7 +424,7 @@ func (c *apiClient) login() error {
 }
 
 func (c *apiClient) logout() error {
-	_, status, err := c.doJSON("POST", "/api/auth/logout", nil)
+	_, status, err := c.doJSON("POST", "/api/users/logout", nil)
 	if err != nil {
 		return err
 	}
@@ -394,7 +544,7 @@ func (c *apiClient) verifyPDF(pdfBytes []byte, signatureB64, pubKeyPEM string) (
 // classical baseline (X25519). Running both makes the cost of post-quantum key
 // exchange directly comparable — same server, same ECDSA certificate, only the
 // KEX group differs.
-func benchmarkHandshake(addr, caPath string, iterations int) []*Result {
+func benchmarkHandshake(addr, caPath, container string, iterations, concurrency int) ([]*Result, []*ResourceMetrics) {
 	variants := []struct {
 		name   string
 		curves []tls.CurveID
@@ -404,37 +554,246 @@ func benchmarkHandshake(addr, caPath string, iterations int) []*Result {
 	}
 
 	var results []*Result
+	var resources []*ResourceMetrics
 	for _, v := range variants {
 		r := &Result{Name: v.name}
-		var lastSent, lastRecv int64
+		rm := &ResourceMetrics{Name: v.name, Iterations: iterations, Concurrency: concurrency}
 
-		for i := 0; i < iterations; i++ {
-			sample, err := measureHandshake(addr, caPath, v.curves)
-			if i == 0 && err != nil {
-				fmt.Printf("\n  [%s] FIRST ERROR: %v\n", v.name, err)
-			}
-			if err == nil {
-				lastSent, lastRecv = sample.bytesSent, sample.bytesRecv
-			}
-			r.Record(sample.elapsed, err)
+		// Snapshot server CPU/memory just before the batch.
+		cpuBefore, cpuOK := readCPUUsec(container)
+		memBefore, memOK := readMemCurrent(container)
+
+		// Track peak memory during the batch in the background.
+		var stop chan struct{}
+		var memDone chan int64
+		if memOK {
+			stop = make(chan struct{})
+			memDone = make(chan int64, 1)
+			go sampleMemPeak(container, stop, memDone)
 		}
 
+		samples, failures, firstErr, lastSent, lastRecv := runHandshakes(addr, caPath, v.curves, iterations, concurrency)
+		if firstErr != nil {
+			fmt.Printf("\n  [%s] FIRST ERROR: %v\n", v.name, firstErr)
+		}
+		r.Samples = samples
+		r.Failures = failures
 		// Handshake size is deterministic per config, so the last successful
 		// sample is representative of every successful handshake.
 		r.HandshakeBytesSent = lastSent
 		r.HandshakeBytesRecv = lastRecv
+
+		// Close out the resource measurement.
+		var memPeak int64
+		if memOK {
+			close(stop)
+			memPeak = <-memDone
+		}
+		cpuAfter, cpuOK2 := readCPUUsec(container)
+
+		rm.OKCount = len(samples)
+		rm.OK = cpuOK && cpuOK2 && memOK
+		if cpuOK && cpuOK2 {
+			rm.CPUUsecDelta = cpuAfter - cpuBefore
+		}
+		rm.MemBefore = memBefore
+		rm.MemPeak = memPeak
+		if rm.MemPeak < rm.MemBefore {
+			rm.MemPeak = rm.MemBefore // batch too short to catch a higher sample
+		}
+
 		results = append(results, r)
+		resources = append(resources, rm)
 	}
 
 	// Report the size delta between the two configurations.
+	printHandshakeSizeDelta(results)
+
+	// Report the CPU/memory delta between the two configurations.
+	printResourceSummary(container, concurrency, resources)
+
+	return results, resources
+}
+
+// printHandshakeSizeDelta reports the on-the-wire size difference between the
+// PQC and classical handshake variants (results[0] = PQC, results[1] = classical).
+func printHandshakeSizeDelta(results []*Result) {
 	if len(results) == 2 && results[0].HandshakeBytesSent > 0 && results[1].HandshakeBytesSent > 0 {
 		pqc := results[0].HandshakeBytesSent + results[0].HandshakeBytesRecv
 		classical := results[1].HandshakeBytesSent + results[1].HandshakeBytesRecv
 		fmt.Printf("\n  [Handshake] PQC adds %d bytes vs classical (%d vs %d, %.1fx)\n",
 			pqc-classical, pqc, classical, float64(pqc)/float64(classical))
 	}
+}
 
-	return results
+// benchmarkHandshakeInterleaved measures the same two variants as
+// benchmarkHandshake, but alternates them in small blocks. Each block is
+// bracketed by a single before/after cgroup CPU read whose delta is accumulated
+// per variant. Because blocks alternate finely in time — and both variants get
+// the same number of blocks — background CPU drift (and the fixed per-block
+// docker-exec overhead) cancels in the PQC-vs-classical delta, which the
+// sequential per-variant method cannot do.
+func benchmarkHandshakeInterleaved(addr, caPath, container string, iterations, concurrency, blockSize int) ([]*Result, []*ResourceMetrics) {
+	variants := []struct {
+		name   string
+		curves []tls.CurveID
+	}{
+		{"TLS Handshake (X25519MLKEM768 PQC)", []tls.CurveID{tls.X25519MLKEM768}},
+		{"TLS Handshake (X25519 classical)", []tls.CurveID{tls.X25519}},
+	}
+	if blockSize < 1 {
+		blockSize = 1
+	}
+
+	type vstate struct {
+		result   *Result
+		rm       *ResourceMetrics
+		curves   []tls.CurveID
+		cpuAccum int64
+		cpuFail  bool
+		firstErr error
+	}
+	states := make([]*vstate, len(variants))
+	for i, v := range variants {
+		states[i] = &vstate{
+			result: &Result{Name: v.name},
+			rm:     &ResourceMetrics{Name: v.name, Iterations: iterations, Concurrency: concurrency},
+			curves: v.curves,
+		}
+	}
+
+	// Baseline memory + background peak sampler attributing each sample to the
+	// currently-active variant via an atomic index.
+	memBase, memOK := readMemCurrent(container)
+	var memPeak [2]int64
+	var active int32 = -1
+	stop := make(chan struct{})
+	var swg sync.WaitGroup
+	if memOK {
+		swg.Add(1)
+		go func() {
+			defer swg.Done()
+			t := time.NewTicker(20 * time.Millisecond)
+			defer t.Stop()
+			for {
+				select {
+				case <-stop:
+					return
+				case <-t.C:
+					av := atomic.LoadInt32(&active)
+					if av < 0 {
+						continue
+					}
+					if m, ok := readMemCurrent(container); ok {
+						for {
+							old := atomic.LoadInt64(&memPeak[av])
+							if m <= old {
+								break
+							}
+							if atomic.CompareAndSwapInt64(&memPeak[av], old, m) {
+								break
+							}
+						}
+					}
+				}
+			}
+		}()
+	}
+
+	remaining := []int{iterations, iterations}
+	for round := 0; remaining[0] > 0 || remaining[1] > 0; round++ {
+		order := []int{0, 1}
+		if round%2 == 1 { // swap order each round to remove any first-in-round bias
+			order = []int{1, 0}
+		}
+		for _, vi := range order {
+			if remaining[vi] <= 0 {
+				continue
+			}
+			b := blockSize
+			if b > remaining[vi] {
+				b = remaining[vi]
+			}
+
+			atomic.StoreInt32(&active, int32(vi))
+			cpuBefore, ok1 := readCPUUsec(container)
+			samples, failures, ferr, lastSent, lastRecv := runHandshakes(addr, caPath, states[vi].curves, b, concurrency)
+			cpuAfter, ok2 := readCPUUsec(container)
+			atomic.StoreInt32(&active, -1)
+
+			st := states[vi]
+			st.result.Samples = append(st.result.Samples, samples...)
+			st.result.Failures += failures
+			if lastSent > 0 || lastRecv > 0 {
+				st.result.HandshakeBytesSent = lastSent
+				st.result.HandshakeBytesRecv = lastRecv
+			}
+			if ferr != nil && st.firstErr == nil {
+				st.firstErr = ferr
+			}
+			if ok1 && ok2 {
+				st.cpuAccum += cpuAfter - cpuBefore
+			} else {
+				st.cpuFail = true
+			}
+			remaining[vi] -= b
+		}
+	}
+
+	if memOK {
+		close(stop)
+		swg.Wait()
+	}
+
+	var results []*Result
+	var resources []*ResourceMetrics
+	for i, st := range states {
+		if st.firstErr != nil {
+			fmt.Printf("\n  [%s] FIRST ERROR: %v\n", st.result.Name, st.firstErr)
+		}
+		st.rm.OKCount = len(st.result.Samples)
+		st.rm.CPUUsecDelta = st.cpuAccum
+		st.rm.MemBefore = memBase
+		st.rm.MemPeak = atomic.LoadInt64(&memPeak[i])
+		if st.rm.MemPeak < memBase {
+			st.rm.MemPeak = memBase
+		}
+		st.rm.OK = !st.cpuFail && memOK
+		results = append(results, st.result)
+		resources = append(resources, st.rm)
+	}
+
+	printHandshakeSizeDelta(results)
+	fmt.Printf("  [Handshake] interleaved in blocks of %d\n", blockSize)
+	printResourceSummary(container, concurrency, resources)
+
+	return results, resources
+}
+
+// printResourceSummary prints per-variant CPU/memory cost and, when both
+// variants measured cleanly, the marginal post-quantum cost per handshake.
+func printResourceSummary(container string, concurrency int, resources []*ResourceMetrics) {
+	fmt.Printf("\n  [Resources] container=%q  concurrency=%d\n", container, concurrency)
+	for _, rm := range resources {
+		if !rm.OK || rm.OKCount == 0 {
+			fmt.Printf("  %-40s  (cgroup read failed — is docker on PATH and %q running?)\n", rm.Name, container)
+			continue
+		}
+		cpuPer := float64(rm.CPUUsecDelta) / float64(rm.OKCount)
+		memDelta := rm.MemPeak - rm.MemBefore
+		fmt.Printf("  %-40s  cpu=%.1f us/hs  (total %.1f ms)  mem peak=+%.0f KiB (%.1f MiB resident)\n",
+			rm.Name, cpuPer, float64(rm.CPUUsecDelta)/1000.0,
+			float64(memDelta)/1024.0, float64(rm.MemPeak)/(1024.0*1024.0))
+	}
+	if len(resources) == 2 && resources[0].OK && resources[1].OK &&
+		resources[0].OKCount > 0 && resources[1].OKCount > 0 {
+		pqcPer := float64(resources[0].CPUUsecDelta) / float64(resources[0].OKCount)
+		clPer := float64(resources[1].CPUUsecDelta) / float64(resources[1].OKCount)
+		if clPer > 0 {
+			fmt.Printf("  [Resources] PQC adds %.1f us CPU/handshake vs classical (%.1f vs %.1f, %.1fx)\n",
+				pqcPer-clPer, pqcPer, clPer, pqcPer/clPer)
+		}
+	}
 }
 
 func benchmarkAuth(c *apiClient, iterations int) (*Result, *Result) {
@@ -609,6 +968,13 @@ func main() {
 	fmt.Printf("  CA cert : %s\n", *caPath)
 	fmt.Printf("  PDF     : %s\n", *pdfPath)
 	fmt.Printf("  N       : %d iterations per benchmark\n", *n)
+	fmt.Printf("  Conc.   : %d concurrent handshake workers\n", *concurrency)
+	if *interleave {
+		fmt.Printf("  Handshake: interleaved, block=%d\n", *block)
+	} else {
+		fmt.Printf("  Handshake: sequential per-variant\n")
+	}
+	fmt.Printf("  Container: %s (CPU/mem sampled via cgroup)\n", *container)
 	fmt.Printf("  Go TLS  : X25519MLKEM768 enabled by default (Go 1.24+)\n")
 	fmt.Println("═══════════════════════════════════════════════════════════════")
 
@@ -642,7 +1008,14 @@ func main() {
 	// ── Benchmark 1: TLS Handshake ────────────────────────────────────────
 	fmt.Printf("\n[2/7] Benchmarking TLS handshake — PQC vs classical (%d iterations)…\n", *n)
 	addr := strings.TrimPrefix(*baseURL, "https://")
-	results = append(results, benchmarkHandshake(addr, *caPath, *n)...)
+	var hsResults []*Result
+	var hsResources []*ResourceMetrics
+	if *interleave {
+		hsResults, hsResources = benchmarkHandshakeInterleaved(addr, *caPath, *container, *n, *concurrency, *block)
+	} else {
+		hsResults, hsResources = benchmarkHandshake(addr, *caPath, *container, *n, *concurrency)
+	}
+	results = append(results, hsResults...)
 
 	// ── Benchmark 2: Auth endpoints ───────────────────────────────────────
 	fmt.Printf("\n[3/7] Benchmarking auth endpoints (%d iterations)…\n", *n)
@@ -695,6 +1068,34 @@ func main() {
 	sizesPath := "sizes_" + stamp + ".csv"
 	exportSizesCSV(sizesPath, sizes, results)
 	fmt.Printf("  Sizes CSV exported → %s\n", sizesPath)
+
+	resPath := "resources_" + stamp + ".csv"
+	exportResourcesCSV(resPath, hsResources)
+	fmt.Printf("  Resources CSV exported → %s\n", resPath)
+}
+
+// exportResourcesCSV writes the per-variant server CPU/memory measurements so
+// the post-quantum vs classical TLS resource cost can be analysed offline.
+func exportResourcesCSV(path string, resources []*ResourceMetrics) {
+	f, err := os.Create(path)
+	if err != nil {
+		log.Printf("Cannot create resources CSV: %v", err)
+		return
+	}
+	defer f.Close()
+
+	fmt.Fprintln(f, "variant,iterations,concurrency,ok_handshakes,cpu_usec_total,cpu_usec_per_handshake,mem_before_bytes,mem_peak_bytes,mem_delta_bytes,cgroup_ok")
+	for _, rm := range resources {
+		label := strings.ReplaceAll(rm.Name, ",", ";")
+		var cpuPer float64
+		if rm.OKCount > 0 {
+			cpuPer = float64(rm.CPUUsecDelta) / float64(rm.OKCount)
+		}
+		fmt.Fprintf(f, "%s,%d,%d,%d,%d,%.2f,%d,%d,%d,%t\n",
+			label, rm.Iterations, rm.Concurrency, rm.OKCount,
+			rm.CPUUsecDelta, cpuPer, rm.MemBefore, rm.MemPeak,
+			rm.MemPeak-rm.MemBefore, rm.OK)
+	}
 }
 
 // exportSizesCSV writes the ML-DSA-65 artifact sizes and the measured TLS

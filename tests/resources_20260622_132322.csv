@@ -1,0 +1,3 @@
+variant,iterations,concurrency,ok_handshakes,cpu_usec_total,cpu_usec_per_handshake,mem_before_bytes,mem_peak_bytes,mem_delta_bytes,cgroup_ok
+TLS Handshake (X25519MLKEM768 PQC),200,1,200,506060,2530.30,8384512,9150464,765952,true
+TLS Handshake (X25519 classical),200,1,200,455060,2275.30,9076736,9211904,135168,true

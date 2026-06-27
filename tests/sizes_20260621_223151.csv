@@ -1,0 +1,10 @@
+artifact,bytes
+signature,3309
+public_key_der,1974
+public_key_pem,2726
+TLS Handshake (X25519MLKEM768 PQC) (sent),1451
+TLS Handshake (X25519MLKEM768 PQC) (recv),1931
+TLS Handshake (X25519MLKEM768 PQC) (total),3382
+TLS Handshake (X25519 classical) (sent),267
+TLS Handshake (X25519 classical) (recv),854
+TLS Handshake (X25519 classical) (total),1121
