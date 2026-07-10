@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!ok) {
       result.className = 'verify-result invalid';
-      result.innerHTML = `<div class="verify-icon">⚠️</div>
+      result.innerHTML = `<div class="verify-icon"><img src="/assets/icons/warning.png" class="icon-img" alt="Error"></div>
         <div class="verify-label" style="color:var(--error)">Error</div>
         <div class="verify-algo">${data.error || 'Verification failed'}</div>`;
       return;

@@ -63,7 +63,9 @@ function renderOverall(status) {
   el.className = `health-overall health-${statusClass(status)}`;
   const icon = status === 'UP'
     ? '<img src="/assets/icons/checkmark.png" class="icon-img" alt="UP">'
-    : (status === 'DEGRADED' ? '⚠️' : '⛔');
+    : (status === 'DEGRADED'
+        ? '<img src="/assets/icons/warning.png" class="icon-img" alt="DEGRADED">'
+        : '<img src="/assets/icons/null.png" class="icon-img" alt="DOWN">');
   el.innerHTML = `<span class="health-dot"></span>
     <span class="health-overall-icon">${icon}</span>
     <span class="health-overall-text">${escHtml(status)}</span>`;

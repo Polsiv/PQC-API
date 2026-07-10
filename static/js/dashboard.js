@@ -42,7 +42,7 @@ function renderTable() {
   if (docs.length === 0) {
     tbody.innerHTML = `<tr><td colspan="5">
       <div class="empty-state">
-        <div class="icon">📄</div>
+        <div class="icon"><img src="/assets/icons/file.png" class="icon-img" alt=""></div>
         <p>No documents yet — upload a PDF above to get started</p>
       </div>
     </td></tr>`;
@@ -97,7 +97,7 @@ async function openVerify(id, filename) {
 
   if (!ok) {
     result.className = 'verify-result invalid';
-    result.innerHTML = `<div class="verify-icon">⚠️</div>
+    result.innerHTML = `<div class="verify-icon"><img src="/assets/icons/warning.png" class="icon-img" alt="Error"></div>
       <div class="verify-label" style="color:var(--error)">Error</div>
       <div class="verify-algo">${escHtml(data.error || 'Unknown error')}</div>`;
     return;
