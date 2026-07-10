@@ -5,6 +5,7 @@
   --primary:   #3b82f6;
   --primary-h: #2563eb;
   --success:   #16a34a;
+  --warning:   #d97706;
   --error:     #dc2626;
   --bg:        #f1f5f9;
   --card:      #ffffff;
@@ -400,6 +401,72 @@ tbody td:last-child { white-space: nowrap; display: flex; gap: .4rem; }
   font-size: .875rem;
   margin-bottom: 1.75rem;
 }
+
+/* ── Icons ──────────────────────────────────────────────────────── */
+.icon-img { height: 1em; width: auto; vertical-align: middle; }
+
+/* ── Admin health ───────────────────────────────────────────────── */
+.health-overall {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius);
+  font-weight: 700;
+  font-size: 1.15rem;
+}
+.health-overall-icon { font-size: 1.25rem; display: flex; align-items: center; }
+.health-overall.health-loading { background: #f8fafc; color: var(--muted); font-weight: 500; font-size: .95rem; }
+.health-overall.health-up       { background: #dcfce7; color: #15803d; }
+.health-overall.health-degraded { background: #fef3c7; color: #b45309; }
+.health-overall.health-down     { background: #fee2e2; color: #b91c1c; }
+.health-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 4px rgba(0,0,0,.06);
+}
+
+.health-meta {
+  margin-top: .75rem;
+  font-size: .78rem;
+  color: var(--muted);
+}
+
+.health-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+.health-card {
+  border: 1px solid var(--border);
+  border-left-width: 4px;
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+  background: var(--card);
+}
+.health-card.health-up       { border-left-color: var(--success); }
+.health-card.health-degraded { border-left-color: var(--warning); }
+.health-card.health-down     { border-left-color: var(--error); }
+.health-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+}
+.health-name { font-weight: 600; font-size: .95rem; }
+.health-detail { margin-top: .4rem; font-size: .78rem; color: var(--muted); }
+
+.health-pill {
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  padding: .2rem .55rem;
+  border-radius: 999px;
+}
+.health-pill-up       { background: #dcfce7; color: #15803d; }
+.health-pill-degraded { background: #fef3c7; color: #b45309; }
+.health-pill-down     { background: #fee2e2; color: #b91c1c; }
 
 /* ── Responsive ─────────────────────────────────────────────────── */
 @media (max-width: 640px) {

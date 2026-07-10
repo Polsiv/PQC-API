@@ -95,6 +95,11 @@
       if (!ok) { showAlert('login-alert', data.error || 'Login failed'); return; }
 
       Auth.setSession(data.token, data.user_id, u);
+
+      // Fetch the role so the dashboard can reveal admin-only UI.
+      const me = await Api.me();
+      Auth.setRole(me.ok ? me.data.role : 'user');
+
       window.location.href = '/dashboard.html';
     }
 

@@ -74,13 +74,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (data.valid) {
       result.className = 'verify-result valid';
       result.innerHTML = `
-        <div class="verify-icon">✅</div>
+        <div class="verify-icon"><img src="/assets/icons/checkmark.png" class="icon-img" alt="Valid"></div>
         <div class="verify-label" style="color:var(--success)">Signature Valid</div>
         <div class="verify-algo">${data.algorithm || 'ML-DSA-65'}</div>`;
     } else {
       result.className = 'verify-result invalid';
       result.innerHTML = `
-        <div class="verify-icon">❌</div>
+        <div class="verify-icon"><img src="/assets/icons/cross.png" class="icon-img" alt="Invalid"></div>
         <div class="verify-label" style="color:var(--error)">Invalid Signature</div>
         <div class="verify-algo">${data.algorithm || 'ML-DSA-65'}</div>`;
     }

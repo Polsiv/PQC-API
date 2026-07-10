@@ -26,6 +26,16 @@ const Api = {
     await fetch('/api/users/logout', { method: 'POST', headers: this._h() });
   },
 
+  async me() {
+    const r = await fetch('/api/users/me', { headers: this._h() });
+    return { ok: r.ok, data: await r.json() };
+  },
+
+  async adminHealth() {
+    const r = await fetch('/api/admin/health', { headers: this._h() });
+    return { ok: r.ok, status: r.status, data: await r.json() };
+  },
+
   async listDocuments() {
     const r = await fetch('/api/documents', { headers: this._h() });
     return { ok: r.ok, data: await r.json() };

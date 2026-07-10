@@ -3,7 +3,6 @@
 #include "auth/AuthManager.h"
 #include "persistence/UserRepository.h"
 #include "persistence/DocumentRepository.h"
-#include "persistence/PostgreSQLClient.h"
 #include "crypto/DilithiumSigner.h"
 #include "pki/Certificate.h"
 #include <drogon/HttpController.h>
@@ -101,7 +100,7 @@ public:
 
 // ─── AdminController ──────────────────────────────────────────────────────────
 // GET /api/admin/health — operational status (UP / DEGRADED / DOWN) of each
-// component: API server, TLS layer, and database. Admin-only.
+// component: API server and TLS layer. Admin-only.
 // AutoCreation=false: instance is created manually and passed to registerController.
 
 class AdminController : public HttpController<AdminController, false> {
@@ -112,9 +111,8 @@ public:
 
     AdminController(AuthManager& auth,
                     UserRepository& user_repo,
-                    PostgreSQLClient& db,
                     const Certificate& server_cert)
-        : auth_(auth), user_repo_(user_repo), db_(db), server_cert_(server_cert) {}
+        : auth_(auth), user_repo_(user_repo), server_cert_(server_cert) {}
 
     void health(const HttpRequestPtr& req,
                 std::function<void(const HttpResponsePtr&)>&& callback);
@@ -128,7 +126,6 @@ private:
 
     AuthManager&        auth_;
     UserRepository&     user_repo_;
-    PostgreSQLClient&   db_;
     const Certificate&  server_cert_;
 };
 

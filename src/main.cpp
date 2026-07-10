@@ -127,7 +127,7 @@ int main()
     auto auth_ctrl   = std::make_shared<AuthController>(auth);
     auto user_ctrl   = std::make_shared<UserController>(auth, user_repo);
     auto health_ctrl = std::make_shared<HealthController>();
-    auto admin_ctrl  = std::make_shared<AdminController>(auth, user_repo, db, server_cert);
+    auto admin_ctrl  = std::make_shared<AdminController>(auth, user_repo, server_cert);
     auto doc_ctrl    = std::make_shared<DocumentController>(auth, doc_repo, doc_signer);
 
     drogon::app().registerController(auth_ctrl);

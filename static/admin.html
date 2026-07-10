@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PQC Sign — Admin</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-logo">PQC Sign <span>Admin</span></div>
+    <div class="nav-right">
+      <span class="nav-user" id="nav-user"></span>
+      <a href="/dashboard.html" class="btn btn-ghost btn-sm">← Dashboard</a>
+      <button id="logout-btn" class="btn btn-ghost btn-sm">Logout</button>
+    </div>
+  </nav>
+
+  <div id="toast-container"></div>
+
+  <div class="main">
+
+    <!-- Overall status banner -->
+    <div class="card">
+      <div class="card-title" style="justify-content:space-between">
+        <span>System Health</span>
+        <button id="refresh-btn" class="btn btn-sm btn-ghost"
+                style="color:var(--muted);border-color:var(--border)">Refresh</button>
+      </div>
+
+      <div id="overall" class="health-overall health-loading">
+        <span class="spinner" style="border-color:rgba(0,0,0,.12);border-top-color:var(--primary)"></span>
+        <span>Checking components…</span>
+      </div>
+
+      <div class="health-meta" id="health-meta"></div>
+    </div>
+
+    <!-- Component grid -->
+    <div class="card">
+      <div class="card-title">Components</div>
+      <div class="health-grid" id="health-grid">
+        <div class="empty-state" style="grid-column:1/-1">
+          <span class="spinner" style="border-color:rgba(0,0,0,.12);border-top-color:var(--primary);width:1.5em;height:1.5em"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/admin.js"></script>
+</body>
+</html>

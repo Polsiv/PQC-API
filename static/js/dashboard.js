@@ -106,13 +106,13 @@ async function openVerify(id, filename) {
   if (data.valid) {
     result.className = 'verify-result valid';
     result.innerHTML = `
-      <div class="verify-icon">✅</div>
+      <div class="verify-icon"><img src="/assets/icons/checkmark.png" class="icon-img" alt="Valid"></div>
       <div class="verify-label" style="color:var(--success)">Signature Valid</div>
       <div class="verify-algo">${escHtml(data.algorithm)} · ${trunc(data.sha256, 20)}</div>`;
   } else {
     result.className = 'verify-result invalid';
     result.innerHTML = `
-      <div class="verify-icon">❌</div>
+      <div class="verify-icon"><img src="/assets/icons/cross.png" class="icon-img" alt="Invalid"></div>
       <div class="verify-label" style="color:var(--error)">Invalid Signature</div>
       <div class="verify-algo">${escHtml(data.algorithm)}</div>`;
   }
@@ -183,6 +183,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!Auth.requireAuth()) return;
 
   document.getElementById('nav-user').textContent = Auth.getUsername() || 'User';
+
+  // Reveal the admin link only for admins. Refresh role from the server so a
+  // change of role reflects without requiring a fresh login.
+  Api.me().then(({ ok, data }) => {
+    if (ok && data.role) Auth.setRole(data.role);
+    if (Auth.isAdmin()) document.getElementById('admin-link').style.display = '';
+  });
 
   document.getElementById('logout-btn').addEventListener('click', async () => {
     await Api.logout();

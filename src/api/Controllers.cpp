@@ -59,7 +59,7 @@ void AuthController::registerUser(const HttpRequestPtr& req, std::function<void(
         std::string password = body.value("password", "");
 
         auto result = auth_.registerUser(username, password);
-        
+
         if (!result.success) {
             return cb(errorResponse(result.error, k400BadRequest));
         }
@@ -120,7 +120,8 @@ void UserController::getProfile(const HttpRequestPtr& req,
     cb(jsonResponse({
         {"id",         user->id},
         {"username",   user->username},
-        {"created_at", user->created_at}
+        {"created_at", user->created_at},
+        {"role",       user->role}
     }));
 }
 
@@ -143,7 +144,7 @@ void UserController::logout(const HttpRequestPtr& req, std::function<void(const 
     cb(jsonResponse({ {"message", "Logged out"} }));
 }
 
-// ─── HealthController ─────────────────────────────────────────────────────────
+// ─── HealthController (external) ─────────────────────────────────────────────────────────
 
 void HealthController::check(const HttpRequestPtr&, std::function<void(const HttpResponsePtr&)>&& cb) {
     cb(jsonResponse({
@@ -183,6 +184,9 @@ std::optional<int> AdminController::requireAdmin(const HttpRequestPtr& req,
 
     return user->id;
 }
+
+// ─── AdminController (health) ──────────────────────────────────────────────────────────
+
 
 void AdminController::health(const HttpRequestPtr& req,
                              std::function<void(const HttpResponsePtr&)>&& cb) {
@@ -229,33 +233,10 @@ void AdminController::health(const HttpRequestPtr& req,
         tls_component["version"] = "1.3";
     }
 
-    // ── Database ──────────────────────────────────────────────────────────────
-    json db_component;
-    {
-        std::string db_status = "DOWN";
-        if (db_.isConnected()) {
-            try {
-                auto start = std::chrono::steady_clock::now();
-                db_.query("SELECT 1");
-                auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::steady_clock::now() - start).count();
-                db_status = "UP";
-                db_component["latency_ms"] = static_cast<int>(elapsed);
-            } catch (const std::exception& e) {
-                db_component["detail"] = e.what();
-            }
-        } else {
-            db_component["detail"] = "not connected";
-        }
-        db_component["status"] = db_status;
-    }
-
     // ── Aggregate ─────────────────────────────────────────────────────────────
-    int worst = std::max({
+    int worst = std::max(
         rank(api_component["status"].get<std::string>()),
-        rank(tls_component["status"].get<std::string>()),
-        rank(db_component["status"].get<std::string>())
-    });
+        rank(tls_component["status"].get<std::string>()));
     const char* overall = worst == 2 ? "DOWN" : (worst == 1 ? "DEGRADED" : "UP");
 
     // Timestamp (UTC, ISO-8601)
@@ -268,8 +249,7 @@ void AdminController::health(const HttpRequestPtr& req,
         {"status", overall},
         {"components", {
             {"api_server", api_component},
-            {"tls",        tls_component},
-            {"database",   db_component}
+            {"tls",        tls_component}
         }},
         {"timestamp", ts}
     }, code));
