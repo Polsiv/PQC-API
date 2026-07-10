@@ -3,7 +3,9 @@
 #include "auth/AuthManager.h"
 #include "persistence/UserRepository.h"
 #include "persistence/DocumentRepository.h"
+#include "persistence/PostgreSQLClient.h"
 #include "crypto/DilithiumSigner.h"
+#include "pki/Certificate.h"
 #include <drogon/HttpController.h>
 #include <nlohmann/json.hpp>
 
@@ -95,6 +97,39 @@ public:
 
     void check(const HttpRequestPtr& req,
                std::function<void(const HttpResponsePtr&)>&& callback);
+};
+
+// ─── AdminController ──────────────────────────────────────────────────────────
+// GET /api/admin/health — operational status (UP / DEGRADED / DOWN) of each
+// component: API server, TLS layer, and database. Admin-only.
+// AutoCreation=false: instance is created manually and passed to registerController.
+
+class AdminController : public HttpController<AdminController, false> {
+public:
+    METHOD_LIST_BEGIN
+        ADD_METHOD_TO(AdminController::health, "/api/admin/health", Get);
+    METHOD_LIST_END
+
+    AdminController(AuthManager& auth,
+                    UserRepository& user_repo,
+                    PostgreSQLClient& db,
+                    const Certificate& server_cert)
+        : auth_(auth), user_repo_(user_repo), db_(db), server_cert_(server_cert) {}
+
+    void health(const HttpRequestPtr& req,
+                std::function<void(const HttpResponsePtr&)>&& callback);
+
+private:
+    // Returns the authenticated user's id if the request carries a valid token
+    // for a user whose role is "admin"; std::nullopt otherwise. On failure,
+    // `status` is set to the HTTP code the caller should return.
+    std::optional<int> requireAdmin(const HttpRequestPtr& req,
+                                    HttpStatusCode& status) const;
+
+    AuthManager&        auth_;
+    UserRepository&     user_repo_;
+    PostgreSQLClient&   db_;
+    const Certificate&  server_cert_;
 };
 
 // ─── DocumentController ───────────────────────────────────────────────────────

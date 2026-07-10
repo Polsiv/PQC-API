@@ -36,13 +36,13 @@ int main()
         return 1;
     }
 
-    // 2. Resolve cert paths (Drogon will load them when the listener starts)
+    // Resolve cert paths (Drogon will load them when the listener starts)
 
     std::string cert_path = env("TLS_CERT_PATH", "/certs/server.crt");
     std::string key_path  = env("TLS_KEY_PATH",  "/certs/server.key");
     std::string ca_path   = env("CA_CERT_PATH",  "/certs/ca.crt");
 
-    // 3. Validate server cert against CA (revocation check at startup)
+    // Validate server cert against CA (revocation check at startup)
 
     Certificate server_cert, ca_cert;
 
@@ -68,7 +68,7 @@ int main()
     }
     std::cout << "[main] Certificate revocation check: OK\n";
 
-    // 4. Connect to persistence layer
+    // Connect to persistence layer
     std::string postgress_connection = env("DATABASE_URL", "host = postgres port = 5432 dbname = pqcapi user = pqcuser password = pqcpass");
     std::string redis_host = env("REDIS_HOST", "redis");
     int redis_port = std::stoi(env("REDIS_PORT", "6379"));
@@ -79,16 +79,27 @@ int main()
     UserRepository user_repo(db);
     SessionRepository session_repo(redis);
 
-    // Ensure schema exists
+    // Ensure schema exists (also self-migrates the users.role column)
     user_repo.createTable();
 
-    // 5. Load JWT HMAC secret
+    // Bootstrap the admin account: promote the configured user to the "admin"
+    // role at startup. Idempotent — safe to run on every boot.
+    std::string admin_username = env("ADMIN_USERNAME", "paulsiv");
+    if (!admin_username.empty()) {
+        if (user_repo.setRole(admin_username, "admin"))
+            std::cout << "[main] Ensured admin role for user '" << admin_username << "'\n";
+        else
+            std::cerr << "[main] Warning: could not set admin role for '" << admin_username << "'\n";
+    }
+
+    // Load JWT HMAC secret
     std::string jwt_secret = env("JWT_SECRET", "change-me-in-production");
 
-    // 6. Build application layer
+    // Build application layer
     AuthManager auth(jwt_secret, user_repo, session_repo);
 
-    // 7. Load or generate ML-DSA-65 keypair for document signing
+    // Load or generate ML-DSA-65 keypair for document signing
+
     DilithiumSigner doc_signer;
     std::string mldsa_key_path = env("MLDSA_KEY_PATH", "/certs/mldsa_server.key");
 
@@ -112,21 +123,21 @@ int main()
     DocumentRepository doc_repo(db);
     doc_repo.createTable();
 
-    // 8. Register Drogon controllers
+    // Register Drogon controllers
     auto auth_ctrl   = std::make_shared<AuthController>(auth);
     auto user_ctrl   = std::make_shared<UserController>(auth, user_repo);
     auto health_ctrl = std::make_shared<HealthController>();
+    auto admin_ctrl  = std::make_shared<AdminController>(auth, user_repo, db, server_cert);
     auto doc_ctrl    = std::make_shared<DocumentController>(auth, doc_repo, doc_signer);
 
     drogon::app().registerController(auth_ctrl);
     drogon::app().registerController(user_ctrl);
     drogon::app().registerController(health_ctrl);
+    drogon::app().registerController(admin_ctrl);
     drogon::app().registerController(doc_ctrl);
 
-    // 8. Configure Drogon's TLS listener with PQC-aware SSL_CONF commands
-    // OQSProvider is already registered in OpenSSL's default library context,
-    // so Drogon's internal SSL_CTX inherits ML-KEM-768
-    // We just need to tell that context to advertise the hybrid group and
+    // Configure Drogon's TLS listener with PQC-aware SSL_CONF commands
+
     int server_port = std::stoi(env("SERVER_PORT", "8443"));
 
     std::vector<std::pair<std::string, std::string>> ssl_conf_cmds = {

@@ -2,6 +2,9 @@
 #include <openssl/bio.h>
 #include <openssl/evp.h>
 #include <iostream>
+#include <algorithm>
+#include <chrono>
+#include <ctime>
 
 // ─── Binary helpers ───────────────────────────────────────────────────────────
 
@@ -152,6 +155,124 @@ void HealthController::check(const HttpRequestPtr&, std::function<void(const Htt
         {"doc_signing",     "ML-DSA-65 (Dilithium3)"},
         {"encryption",      "AES-256-GCM"}
     }));
+}
+
+// ─── AdminController ──────────────────────────────────────────────────────────
+
+std::optional<int> AdminController::requireAdmin(const HttpRequestPtr& req,
+                                                 HttpStatusCode& status) const {
+    std::string auth_header = req->getHeader("Authorization");
+    if (auth_header.rfind("Bearer ", 0) != 0) {
+        status = k401Unauthorized;
+        return std::nullopt;
+    }
+
+    auto user_id = auth_.verifyToken(auth_header.substr(7));
+    if (!user_id) {
+        status = k401Unauthorized;
+        return std::nullopt;
+    }
+
+    // Role is resolved from the database on every request, so revoking admin
+    // takes effect immediately rather than living on in an already-issued token.
+    auto user = user_repo_.findById(std::stoi(*user_id));
+    if (!user || user->role != "admin") {
+        status = k403Forbidden;
+        return std::nullopt;
+    }
+
+    return user->id;
+}
+
+void AdminController::health(const HttpRequestPtr& req,
+                             std::function<void(const HttpResponsePtr&)>&& cb) {
+    HttpStatusCode gate = k200OK;
+    if (!requireAdmin(req, gate)) {
+        return cb(errorResponse(
+            gate == k403Forbidden ? "Admin privileges required" : "Unauthorized",
+            gate));
+    }
+
+    // Severity ranking so we can aggregate to the worst component state.
+    auto rank = [](const std::string& s) {
+        if (s == "DOWN")     return 2;
+        if (s == "DEGRADED") return 1;
+        return 0;                     // UP
+    };
+
+    // ── API server ────────────────────────────────────────────────────────────
+    // If this handler is executing, the HTTP/event loop is serving requests.
+    json api_component = { {"status", "UP"} };
+
+    // ── TLS layer ─────────────────────────────────────────────────────────────
+    // Health is derived from the server certificate validated at startup.
+    json tls_component;
+    {
+        std::string tls_status;
+        if (!server_cert_.isValid()) {
+            // No cert or already past notAfter — the listener can't serve TLS.
+            tls_status = "DOWN";
+            tls_component["detail"] = "server certificate invalid or expired";
+        } else {
+            std::time_t not_after = server_cert_.getNotAfter();
+            std::time_t now        = std::time(nullptr);
+            double days_left       = std::difftime(not_after, now) / 86400.0;
+            if (days_left <= 7.0) {
+                tls_status = "DEGRADED";
+                tls_component["detail"] = "certificate expires soon";
+            } else {
+                tls_status = "UP";
+            }
+            tls_component["days_until_expiry"] = static_cast<int>(days_left);
+        }
+        tls_component["status"]  = tls_status;
+        tls_component["version"] = "1.3";
+    }
+
+    // ── Database ──────────────────────────────────────────────────────────────
+    json db_component;
+    {
+        std::string db_status = "DOWN";
+        if (db_.isConnected()) {
+            try {
+                auto start = std::chrono::steady_clock::now();
+                db_.query("SELECT 1");
+                auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now() - start).count();
+                db_status = "UP";
+                db_component["latency_ms"] = static_cast<int>(elapsed);
+            } catch (const std::exception& e) {
+                db_component["detail"] = e.what();
+            }
+        } else {
+            db_component["detail"] = "not connected";
+        }
+        db_component["status"] = db_status;
+    }
+
+    // ── Aggregate ─────────────────────────────────────────────────────────────
+    int worst = std::max({
+        rank(api_component["status"].get<std::string>()),
+        rank(tls_component["status"].get<std::string>()),
+        rank(db_component["status"].get<std::string>())
+    });
+    const char* overall = worst == 2 ? "DOWN" : (worst == 1 ? "DEGRADED" : "UP");
+
+    // Timestamp (UTC, ISO-8601)
+    std::time_t now = std::time(nullptr);
+    char ts[32];
+    std::strftime(ts, sizeof(ts), "%Y-%m-%dT%H:%M:%SZ", std::gmtime(&now));
+
+    HttpStatusCode code = worst == 2 ? k503ServiceUnavailable : k200OK;
+    cb(jsonResponse({
+        {"status", overall},
+        {"components", {
+            {"api_server", api_component},
+            {"tls",        tls_component},
+            {"database",   db_component}
+        }},
+        {"timestamp", ts}
+    }, code));
 }
 
 // ─── DocumentController ───────────────────────────────────────────────────────

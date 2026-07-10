@@ -9,6 +9,7 @@ struct User {
     std::string username;
     std::string password_hash;   // Argon2id via libsodium
     std::string created_at;
+    std::string role;            // "user" (default) or "admin"
 };
 
 /**
@@ -25,6 +26,9 @@ public:
     std::optional<User> findById(int id);
     std::optional<User> findByUsername(const std::string& username);
     bool               remove(int id);
+
+    // Set a user's role (e.g. promote to "admin"). Idempotent.
+    bool               setRole(const std::string& username, const std::string& role);
 
 private:
     PostgreSQLClient& db_;
