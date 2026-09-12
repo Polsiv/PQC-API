@@ -13,7 +13,9 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Build liboqs ──────────────────────────────────────────────────────────────
-RUN git clone --depth 1 --branch main \
+# Pinned to 0.12.0 — must stay in sync with the oqs-provider tag below.
+# Tracking `main` for both drifts them out of sync (algorithms get renamed).
+RUN git clone --depth 1 --branch 0.12.0 \
     https://github.com/open-quantum-safe/liboqs.git /tmp/liboqs && \
     cmake -S /tmp/liboqs -B /tmp/liboqs/build \
         -DCMAKE_BUILD_TYPE=Release \
@@ -24,10 +26,13 @@ RUN git clone --depth 1 --branch main \
 
 # ── Build oqs-provider ────────────────────────────────────────────────────────
 # Use direct cp (same as local install) instead of cmake --install
-RUN git clone --depth 1 \
+# Pinned to 0.8.0 — the matching release for liboqs 0.12.0 (see table in
+# oqs-provider RELEASE.md). 0.8.0 is the first release exposing `mldsa65`.
+RUN git clone --depth 1 --branch 0.8.0 \
     https://github.com/open-quantum-safe/oqs-provider.git /tmp/oqs-provider && \
     cmake -S /tmp/oqs-provider -B /tmp/oqs-provider/build \
         -DCMAKE_BUILD_TYPE=Release \
+        -DOQS_PROVIDER_BUILD_TESTING=OFF \
         -Dliboqs_DIR=/usr/local/lib/cmake/liboqs && \
     cmake --build /tmp/oqs-provider/build --parallel $(nproc) && \
     mkdir -p /usr/local/lib/ossl-modules && \

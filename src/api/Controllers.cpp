@@ -133,14 +133,12 @@ void UserController::logout(const HttpRequestPtr& req, std::function<void(const 
         return cb(errorResponse("Unauthorized", k401Unauthorized));
     }
 
-    // verifyToken internally parses and validates the session_id
-    auto user_id = auth_.verifyToken(auth_header.substr(7));
-    if (!user_id) {
+    // Revoke the session server-side so the token cannot be reused before
+    // its TTL lapses. logout() parses the token and invalidates its session.
+    if (!auth_.logout(auth_header.substr(7))) {
         return cb(errorResponse("Invalid or expired token", k401Unauthorized));
     }
 
-    // For logout we just return success — the session TTL will expire naturally
-    // In production you'd extract session_id from the token and call revokeToken
     cb(jsonResponse({ {"message", "Logged out"} }));
 }
 
@@ -177,7 +175,7 @@ std::optional<int> AdminController::requireAdmin(const HttpRequestPtr& req,
     // Role is resolved from the database on every request, so revoking admin
     // takes effect immediately rather than living on in an already-issued token.
     auto user = user_repo_.findById(std::stoi(*user_id));
-    if (!user || user->role != "admin") {
+    if (!user || user->role != 1) {
         status = k403Forbidden;
         return std::nullopt;
     }

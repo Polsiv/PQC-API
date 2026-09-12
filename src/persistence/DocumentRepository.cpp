@@ -3,20 +3,6 @@
 
 DocumentRepository::DocumentRepository(PostgreSQLClient& db) : db_(db) {}
 
-bool DocumentRepository::createTable() {
-    return db_.execute(R"(
-        CREATE TABLE IF NOT EXISTS documents (
-            id          SERIAL PRIMARY KEY,
-            user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            filename    VARCHAR(255) NOT NULL,
-            pdf_data    TEXT NOT NULL,
-            signature   TEXT NOT NULL,
-            sha256_hash VARCHAR(64) NOT NULL,
-            signed_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-    )");
-}
-
 int DocumentRepository::save(int user_id, const std::string& filename,
                               const std::string& pdf_b64,
                               const std::string& signature_b64,

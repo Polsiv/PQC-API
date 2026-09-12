@@ -138,6 +138,17 @@ bool AuthManager::revokeToken(const std::string& session_id) {
     return session_repo_.invalidate(session_id);
 }
 
+bool AuthManager::logout(const std::string& token) {
+    std::string user_id, session_id;
+    if (!parseToken(token, user_id, session_id)) {
+        return false;
+    }
+    // Best-effort revoke — deleting an already-expired session is a no-op,
+    // so logout stays idempotent even if the session already lapsed.
+    session_repo_.invalidate(session_id);
+    return true;
+}
+
 // ─── Private helpers ──────────────────────────────────────────────────────────
 
 std::string AuthManager::hashPassword(const std::string& password) const {

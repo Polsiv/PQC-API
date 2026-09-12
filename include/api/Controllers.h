@@ -119,7 +119,7 @@ public:
 
 private:
     // Returns the authenticated user's id if the request carries a valid token
-    // for a user whose role is "admin"; std::nullopt otherwise. On failure,
+    // for a user whose role is admin (1); std::nullopt otherwise. On failure,
     // `status` is set to the HTTP code the caller should return.
     std::optional<int> requireAdmin(const HttpRequestPtr& req,
                                     HttpStatusCode& status) const;

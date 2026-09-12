@@ -2,8 +2,8 @@ const Auth = {
   getToken()   { return sessionStorage.getItem('pqc_token'); },
   getUserId()  { return sessionStorage.getItem('pqc_uid'); },
   getUsername(){ return sessionStorage.getItem('pqc_user'); },
-  getRole()    { return sessionStorage.getItem('pqc_role') || 'user'; },
-  isAdmin()    { return this.getRole() === 'admin'; },
+  getRole()    { return sessionStorage.getItem('pqc_role') || '0'; },
+  isAdmin()    { return Number(this.getRole()) === 1; },
 
   setSession(token, userId, username) {
     sessionStorage.setItem('pqc_token', token);
@@ -12,7 +12,8 @@ const Auth = {
   },
 
   setRole(role) {
-    sessionStorage.setItem('pqc_role', role || 'user');
+    // role is an integer: 0 = user, 1 = admin
+    sessionStorage.setItem('pqc_role', String(role ?? 0));
   },
 
   clearSession() {
@@ -36,7 +37,7 @@ const Auth = {
   async requireAdmin() {
     if (!this.requireAuth()) return false;
     const { ok, data } = await Api.me();
-    if (ok && data.role) this.setRole(data.role);
+    if (ok && data.role !== undefined) this.setRole(data.role);
     if (!this.isAdmin()) {
       window.location.href = '/dashboard.html';
       return false;

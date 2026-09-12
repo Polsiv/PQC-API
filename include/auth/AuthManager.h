@@ -32,6 +32,10 @@ public:
     // Revoke a session
     bool revokeToken(const std::string& session_id);
 
+    // Log out — parse the token, revoke the session it carries.
+    // Returns true if the token was valid (session revoked best-effort).
+    bool logout(const std::string& token);
+
 private:
     std::string hashPassword(const std::string& password) const;
     bool        verifyPassword(const std::string& password,

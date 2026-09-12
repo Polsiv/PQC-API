@@ -18,7 +18,6 @@ class DocumentRepository {
 public:
     explicit DocumentRepository(PostgreSQLClient& db);
 
-    bool                       createTable();
     int                        save(int user_id, const std::string& filename,
                                     const std::string& pdf_b64,
                                     const std::string& signature_b64,

@@ -3,19 +3,6 @@
 
 UserRepository::UserRepository(PostgreSQLClient& db) : db_(db) {}
 
-bool UserRepository::createTable() {
-    const std::string sql = R"(
-        CREATE TABLE IF NOT EXISTS users (
-            id            SERIAL PRIMARY KEY,
-            username      VARCHAR(64) UNIQUE NOT NULL,
-            password_hash VARCHAR(256) NOT NULL,
-            role          VARCHAR(16) NOT NULL DEFAULT 'user',
-            created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-    )";
-    return db_.execute(sql);
-}
-
 bool UserRepository::save(const std::string& username,
                            const std::string& password_hash) {
     return db_.execute(
@@ -37,7 +24,7 @@ std::optional<User> UserRepository::findById(int id) {
         row["username"].c_str(),
         row["password_hash"].c_str(),
         row["created_at"].c_str(),
-        row["role"].c_str()
+        row["role"].as<int>()
     };
 }
 
@@ -54,7 +41,7 @@ std::optional<User> UserRepository::findByUsername(const std::string& username) 
         row["username"].c_str(),
         row["password_hash"].c_str(),
         row["created_at"].c_str(),
-        row["role"].c_str()
+        row["role"].as<int>()
     };
 }
 
@@ -62,7 +49,7 @@ bool UserRepository::remove(int id) {
     return db_.execute("DELETE FROM users WHERE id = $1", { std::to_string(id) });
 }
 
-bool UserRepository::setRole(const std::string& username, const std::string& role) {
+bool UserRepository::setRole(const std::string& username, int role) {
     return db_.execute("UPDATE users SET role = $2 WHERE username = $1",
-                       { username, role });
+                       { username, std::to_string(role) });
 }

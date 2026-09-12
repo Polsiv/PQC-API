@@ -79,18 +79,8 @@ int main()
     UserRepository user_repo(db);
     SessionRepository session_repo(redis);
 
-    // Ensure schema exists (also self-migrates the users.role column)
-    user_repo.createTable();
-
-    // Bootstrap the admin account: promote the configured user to the "admin"
-    // role at startup. Idempotent — safe to run on every boot.
-    std::string admin_username = env("ADMIN_USERNAME", "paulsiv");
-    if (!admin_username.empty()) {
-        if (user_repo.setRole(admin_username, "admin"))
-            std::cout << "[main] Ensured admin role for user '" << admin_username << "'\n";
-        else
-            std::cerr << "[main] Warning: could not set admin role for '" << admin_username << "'\n";
-    }
+    // Schema and the seed admin account (paulsiv) are created by
+    // scripts/init.sql on first container start.
 
     // Load JWT HMAC secret
     std::string jwt_secret = env("JWT_SECRET", "change-me-in-production");
@@ -121,7 +111,6 @@ int main()
     }
 
     DocumentRepository doc_repo(db);
-    doc_repo.createTable();
 
     // Register Drogon controllers
     auto auth_ctrl   = std::make_shared<AuthController>(auth);

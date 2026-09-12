@@ -187,12 +187,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Reveal the admin link only for admins. Refresh role from the server so a
   // change of role reflects without requiring a fresh login.
   Api.me().then(({ ok, data }) => {
-    if (ok && data.role) Auth.setRole(data.role);
+    if (ok && data.role !== undefined) Auth.setRole(data.role);
     if (Auth.isAdmin()) document.getElementById('admin-link').style.display = '';
   });
 
   document.getElementById('logout-btn').addEventListener('click', async () => {
-    await Api.logout();
+    // Revoke server-side, but log out locally regardless of the result so a
+    // failed/slow request never leaves the user stuck on the dashboard.
+    try { await Api.logout(); } catch (_) { /* ignore */ }
     Auth.clearSession();
     window.location.href = '/index.html';
   });
