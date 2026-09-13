@@ -13,7 +13,9 @@
 
 #include <drogon/drogon.h>
 #include <iostream>
+#include <cstdio>
 #include <cstdlib>
+#include <sys/stat.h>
 
 
 
@@ -24,7 +26,20 @@ static std::string env(const char* name, const char* fallback)
     return val ? std::string(val) : std::string(fallback);
 }
 
-int main()
+// Write a private key PEM to a new file readable only by its owner. Refuses to
+// overwrite an existing file: replacing the ML-DSA key would invalidate every
+// signature already issued.
+static bool writePrivateKeyFile(const std::string& path, const std::string& pem)
+{
+    mode_t old_mask = umask(077);
+    FILE* f = fopen(path.c_str(), "wx");
+    umask(old_mask);
+    if (!f) return false;
+    bool ok = fwrite(pem.data(), 1, pem.size(), f) == pem.size();
+    return fclose(f) == 0 && ok;
+}
+
+int main(int argc, char** argv)
 {
     std::cout << "Hybrid TLS 1.3: X25519 + ML-KEM-768" << std::endl;
 
@@ -34,6 +49,21 @@ int main()
     if (!oqs.load()) {
         std::cerr << "[main] OQS provider failed to load. Aborting.\n";
         return 1;
+    }
+
+    // One-off key generation used by scripts/generate_certs.sh. It runs the same
+    // OpenSSL + oqs-provider build as the server, so the key format always
+    // matches what loadPrivateKey expects.
+    if (argc == 3 && std::string(argv[1]) == "--generate-mldsa-key") {
+        DilithiumSigner signer;
+        if (!signer.generateKeyPair() ||
+            !writePrivateKeyFile(argv[2], signer.exportPrivateKeyPEM())) {
+            std::cerr << "[main] Could not generate ML-DSA-65 key at " << argv[2]
+                      << " (does the file already exist?)\n";
+            return 1;
+        }
+        std::cout << "[main] ML-DSA-65 key written to " << argv[2] << "\n";
+        return 0;
     }
 
     // Resolve cert paths (Drogon will load them when the listener starts)
@@ -108,14 +138,12 @@ int main()
             std::cerr << "[main] ML-DSA-65 keygen failed. Aborting.\n";
             return 1;
         }
-        std::string pem = doc_signer.exportPrivateKeyPEM();
-        FILE* f = fopen(mldsa_key_path.c_str(), "w");
-        if (f) {
-            fwrite(pem.data(), 1, pem.size(), f);
-            fclose(f);
+        if (writePrivateKeyFile(mldsa_key_path, doc_signer.exportPrivateKeyPEM())) {
             std::cout << "[main] ML-DSA-65 key saved to " << mldsa_key_path << "\n";
         } else {
-            std::cerr << "[main] Warning: could not persist ML-DSA-65 key to " << mldsa_key_path << "\n";
+            std::cerr << "[main] Warning: could not persist ML-DSA-65 key to " << mldsa_key_path
+                      << "; documents signed now will fail verification after a restart. "
+                         "Run scripts/generate_certs.sh to create the key.\n";
         }
     }
 

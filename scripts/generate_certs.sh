@@ -6,6 +6,10 @@
 # The PQC guarantee comes from X25519+ML-KEM-768 hybrid key exchange at
 # runtime — the cert just needs to be valid, not PQC-signed.
 #
+# Also creates the ML-DSA-65 document signing key (once) by running the API
+# image, so the key is produced by the same OpenSSL + oqs-provider build that
+# loads it.
+#
 # Usage (from project root):
 #   chmod +x scripts/generate_certs.sh
 #   ./scripts/generate_certs.sh
@@ -13,7 +17,8 @@
 
 set -euo pipefail
 
-CERTS_DIR="$(pwd)/certs"
+PROJECT_DIR="$(pwd)"
+CERTS_DIR="$PROJECT_DIR/certs"
 DAYS=365
 
 mkdir -p "$CERTS_DIR"
@@ -23,17 +28,18 @@ echo "════════════════════════�
 echo "  Hybrid PQC TLS — Certificate Generation"
 echo "  CA + Server: ECDSA P-256"
 echo "  Key Exchange: X25519 + ML-KEM-768 (runtime)"
+echo "  Document signing: ML-DSA-65"
 echo "════════════════════════════════════════════"
 
 # ── 1. CA private key (ECDSA P-256) ──────────────────────────────────────────
 echo ""
-echo "[1/5] Generating CA private key (ECDSA P-256)..."
+echo "[1/6] Generating CA private key (ECDSA P-256)..."
 openssl ecparam -name prime256v1 -genkey -noout -out ca.key
 echo "      ✓ ca.key"
 
 # ── 2. Self-signed CA certificate ────────────────────────────────────────────
 echo ""
-echo "[2/5] Generating CA certificate..."
+echo "[2/6] Generating CA certificate..."
 openssl req -new -x509 \
     -key ca.key \
     -out ca.crt \
@@ -43,13 +49,13 @@ echo "      ✓ ca.crt"
 
 # ── 3. Server private key (ECDSA P-256) ──────────────────────────────────────
 echo ""
-echo "[3/5] Generating server private key..."
+echo "[3/6] Generating server private key..."
 openssl ecparam -name prime256v1 -genkey -noout -out server.key
 echo "      ✓ server.key"
 
 # ── 4. Server CSR + sign ──────────────────────────────────────────────────────
 echo ""
-echo "[4/5] Generating and signing server certificate..."
+echo "[4/6] Generating and signing server certificate..."
 openssl req -new \
     -key server.key \
     -out server.csr \
@@ -73,12 +79,32 @@ echo "      ✓ server.crt"
 
 # ── 5. OCSP index ─────────────────────────────────────────────────────────────
 echo ""
-echo "[5/5] Creating OCSP index..."
+echo "[5/6] Creating OCSP index..."
 SERIAL=$(openssl x509 -in server.crt -noout -serial | cut -d= -f2)
 EXPIRY=$(openssl x509 -in server.crt -noout -enddate | cut -d= -f2)
 printf "V\t%s\t\t%s\tunknown\t/CN=localhost/O=PQC API Server/C=US\n" \
     "$EXPIRY" "$SERIAL" > index.txt
 echo "      ✓ index.txt"
+
+# ── 6. ML-DSA-65 document signing key ─────────────────────────────────────────
+# Never overwritten: replacing it makes every stored signature fail verification.
+echo ""
+echo "[6/6] ML-DSA-65 document signing key..."
+if [ -f mldsa_server.key ]; then
+    echo "      ✓ mldsa_server.key already exists, keeping it"
+else
+    echo "      Building API image (the first build takes several minutes)..."
+    docker build -t pqc_api_keygen "$PROJECT_DIR"
+
+    # Git Bash needs a Windows-style path for the bind mount, and must not
+    # rewrite the container-side paths
+    HOST_CERTS_DIR="$(pwd -W 2>/dev/null || pwd)"
+    MSYS_NO_PATHCONV=1 docker run --rm \
+        --user "$(id -u):$(id -g)" \
+        --mount "type=bind,source=$HOST_CERTS_DIR,target=/out" \
+        pqc_api_keygen pqc_api --generate-mldsa-key /out/mldsa_server.key
+    echo "      ✓ mldsa_server.key"
+fi
 
 # ── Verify ────────────────────────────────────────────────────────────────────
 echo ""
@@ -91,11 +117,12 @@ rm -f server.csr ca.srl ocsp_ext.cnf
 echo ""
 echo "════════════════════════════════════════════"
 echo "  Files in $CERTS_DIR:"
-echo "  ca.key      ← keep secret, offline only"
-echo "  ca.crt      ← loaded by server + OCSP"
-echo "  server.key  ← loaded by Drogon"
-echo "  server.crt  ← loaded by Drogon"
-echo "  index.txt   ← OCSP revocation DB"
+echo "  ca.key            ← keep secret (also used by the OCSP responder)"
+echo "  ca.crt            ← loaded by server + OCSP"
+echo "  server.key        ← loaded by Drogon"
+echo "  server.crt        ← loaded by Drogon"
+echo "  index.txt         ← OCSP revocation DB"
+echo "  mldsa_server.key  ← ML-DSA-65 document signing key"
 echo ""
-echo "  Next: docker-compose up --build"
+echo "  Next: set JWT_SECRET in .env, then docker compose up --build"
 echo "════════════════════════════════════════════"
