@@ -30,10 +30,14 @@ public:
     bool verify(const std::string& data,
                 const std::vector<uint8_t>& signature) const;
 
-    // Verify using a caller-supplied PEM public key — no loaded key required
+    // Verify using a caller-supplied PEM public key — no loaded key required.
+    // Throws std::invalid_argument if the PEM is not an ML-DSA-65 public key.
     static bool verifyWithPEM(const std::string& data,
                                const std::vector<uint8_t>& signature,
                                const std::string& public_key_pem);
+
+    // True if the PEM public key is the same key this signer holds
+    bool isOwnPublicKey(const std::string& public_key_pem) const;
 
     // Export keys to PEM string (for storage or distribution)
     std::string exportPrivateKeyPEM() const;

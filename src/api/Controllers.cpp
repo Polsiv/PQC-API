@@ -468,13 +468,18 @@ void DocumentController::verifyExternal(const HttpRequestPtr& req,
     bool valid = false;
     try {
         valid = DilithiumSigner::verifyWithPEM(pdf_str, sig_bytes, key_it->second);
+    } catch (const std::invalid_argument& e) {
+        return cb(errorResponse(e.what(), k400BadRequest));
     } catch (const std::exception& e) {
         std::cerr << "[DocumentController] verifyExternal failed: " << e.what() << "\n";
         return cb(errorResponse("Verification error", k500InternalServerError));
     }
 
     cb(jsonResponse({
-        {"valid",     valid},
-        {"algorithm", "ML-DSA-65"}
+        {"valid",      valid},
+        {"algorithm",  "ML-DSA-65"},
+        // "valid" only means the signature matches the submitted key; this says
+        // whether that key is the server's, i.e. whether this server signed it
+        {"server_key", signer_.isOwnPublicKey(key_it->second)}
     }));
 }

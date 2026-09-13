@@ -80,12 +80,20 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    if (data.valid) {
+    if (data.valid && data.server_key) {
       result.className = 'verify-result valid';
       result.innerHTML = `
         <div class="verify-icon"><img src="/assets/icons/checkmark.png" class="icon-img" alt="Valid"></div>
         <div class="verify-label" style="color:var(--success)">Signature Valid</div>
-        <div class="verify-algo">${escHtml(data.algorithm || 'ML-DSA-65')}</div>`;
+        <div class="verify-algo">${escHtml(data.algorithm || 'ML-DSA-65')} · signed by this server</div>`;
+    } else if (data.valid) {
+      // Matches the pasted key, but that key isn't the server's, so this server
+      // did not sign the document.
+      result.className = 'verify-result invalid';
+      result.innerHTML = `
+        <div class="verify-icon"><img src="/assets/icons/warning.png" class="icon-img" alt="Warning"></div>
+        <div class="verify-label" style="color:var(--error)">Not Signed by This Server</div>
+        <div class="verify-algo">${escHtml(data.algorithm || 'ML-DSA-65')} · signature matches the submitted key, which is not this server's key</div>`;
     } else {
       result.className = 'verify-result invalid';
       result.innerHTML = `

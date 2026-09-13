@@ -6,6 +6,11 @@
 #include <iostream>
 #include <stdexcept>
 
+// oqs-provider names the key "mldsa65"; OpenSSL 3.5+ native uses "ML-DSA-65"
+static bool isMlDsa65(const EVP_PKEY* key) {
+    return EVP_PKEY_is_a(key, "mldsa65") || EVP_PKEY_is_a(key, "ML-DSA-65");
+}
+
 DilithiumSigner::DilithiumSigner() {
     if (!OQSProvider::getInstance().isLoaded()) {
         throw std::runtime_error("OQSProvider must be loaded before DilithiumSigner");
@@ -165,7 +170,14 @@ bool DilithiumSigner::verifyWithPEM(const std::string& data,
 
     EVP_PKEY* pub_key = PEM_read_bio_PUBKEY(bio, nullptr, nullptr, nullptr);
     BIO_free(bio);
-    if (!pub_key) return false;
+    if (!pub_key) throw std::invalid_argument("Invalid PEM public key");
+
+    // PEM_read_bio_PUBKEY accepts any key type. Without this check an RSA or
+    // ECDSA signature would verify here and be reported as ML-DSA-65.
+    if (!isMlDsa65(pub_key)) {
+        EVP_PKEY_free(pub_key);
+        throw std::invalid_argument("Public key must be ML-DSA-65");
+    }
 
     EVP_MD_CTX* md_ctx = EVP_MD_CTX_new();
     if (!md_ctx) { EVP_PKEY_free(pub_key); return false; }
@@ -185,6 +197,23 @@ bool DilithiumSigner::verifyWithPEM(const std::string& data,
     EVP_MD_CTX_free(md_ctx);
     EVP_PKEY_free(pub_key);
     return result == 1;
+}
+
+bool DilithiumSigner::isOwnPublicKey(const std::string& public_key_pem) const {
+    if (!public_key_) return false;
+
+    BIO* bio = BIO_new_mem_buf(public_key_pem.data(), static_cast<int>(public_key_pem.size()));
+    if (!bio) return false;
+
+    EVP_PKEY* key = PEM_read_bio_PUBKEY(bio, nullptr, nullptr, nullptr);
+    BIO_free(bio);
+    if (!key) return false;
+
+    // Compare re-encoded PEMs so whitespace or line-wrapping differences in the
+    // submitted text don't matter
+    bool same = exportKeyPEM(key, false) == exportPublicKeyPEM();
+    EVP_PKEY_free(key);
+    return same;
 }
 
 std::string DilithiumSigner::exportPrivateKeyPEM() const {

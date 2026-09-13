@@ -161,9 +161,9 @@ int main()
 
     drogon::app()
         .setDocumentRoot("./static")
-        .addListener("0.0.0.0", server_port, /*useSSL*/ true,
+        .addListener("0.0.0.0", server_port, true,
                      cert_path, key_path,
-                     /*useOldTLS*/ false,
+                     false,
                      ssl_conf_cmds)
         .setThreadNum(4)
         .setClientMaxBodySize(50 * 1024 * 1024)   // <- this 50 MB
