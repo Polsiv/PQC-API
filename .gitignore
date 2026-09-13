@@ -1,3 +1,4 @@
 certs/
 .env
 tests/results
+cbom

@@ -244,6 +244,3 @@ curl --cacert certs/ca.crt https://localhost:8443/api/users/me \
 - **Frontend hardening.** Every response carries a Content Security Policy (`script-src 'self'`)
   plus `X-Content-Type-Options`, `X-Frame-Options` and `Referrer-Policy` headers. Pages contain no
   inline scripts or event handlers.
-
-- **CBOM.** `cbom/cbom.json` is a CycloneDX 1.6 Cryptography Bill of Materials describing the
-  algorithms, keys and protocols in use.
