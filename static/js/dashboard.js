@@ -20,7 +20,8 @@ function escHtml(s) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 // ── Document list ─────────────────────────────────────────────────
@@ -51,17 +52,14 @@ function renderTable() {
 
   tbody.innerHTML = docs.map(d => `
     <tr>
-      <td>${d.id}</td>
+      <td>${escHtml(d.id)}</td>
       <td>${escHtml(d.filename)}</td>
-      <td>${fmtDate(d.signed_at)}</td>
-      <td class="mono" title="${escHtml(d.sha256)}">${trunc(d.sha256)}</td>
+      <td>${escHtml(fmtDate(d.signed_at))}</td>
+      <td class="mono" title="${escHtml(d.sha256)}">${escHtml(trunc(d.sha256))}</td>
       <td>
-        <button class="btn btn-sm btn-primary"
-          onclick="downloadDoc(${d.id}, '${escHtml(d.filename)}')">Download</button>
-        <button class="btn btn-sm btn-ghost"
-          onclick="openVerify(${d.id}, '${escHtml(d.filename)}')">Verify</button>
-        <button class="btn btn-sm btn-ghost"
-          onclick="deleteDoc(${d.id}, '${escHtml(d.filename)}')">Delete</button>
+        <button class="btn btn-sm btn-primary" data-action="download" data-id="${escHtml(d.id)}">Download</button>
+        <button class="btn btn-sm btn-ghost"   data-action="verify"   data-id="${escHtml(d.id)}">Verify</button>
+        <button class="btn btn-sm btn-ghost"   data-action="delete"   data-id="${escHtml(d.id)}">Delete</button>
       </td>
     </tr>
   `).join('');
@@ -108,7 +106,7 @@ async function openVerify(id, filename) {
     result.innerHTML = `
       <div class="verify-icon"><img src="/assets/icons/checkmark.png" class="icon-img" alt="Valid"></div>
       <div class="verify-label" style="color:var(--success)">Signature Valid</div>
-      <div class="verify-algo">${escHtml(data.algorithm)} · ${trunc(data.sha256, 20)}</div>`;
+      <div class="verify-algo">${escHtml(data.algorithm)} · ${escHtml(trunc(data.sha256, 20))}</div>`;
   } else {
     result.className = 'verify-result invalid';
     result.innerHTML = `
@@ -200,6 +198,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   document.getElementById('sign-btn').addEventListener('click', signDocument);
+
+  // Row actions use data attributes and one delegated listener instead of inline
+  // onclick handlers, so filenames never end up inside executable attributes.
+  document.getElementById('doc-tbody').addEventListener('click', e => {
+    const btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    const doc = docs.find(d => String(d.id) === btn.dataset.id);
+    if (!doc) return;
+    if (btn.dataset.action === 'download')    downloadDoc(doc.id, doc.filename);
+    else if (btn.dataset.action === 'verify') openVerify(doc.id, doc.filename);
+    else if (btn.dataset.action === 'delete') deleteDoc(doc.id, doc.filename);
+  });
 
   document.getElementById('sig-modal-close').addEventListener('click', () => {
     document.getElementById('sig-modal').classList.remove('open');

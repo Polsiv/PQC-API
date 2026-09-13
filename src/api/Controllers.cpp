@@ -3,6 +3,7 @@
 #include <openssl/evp.h>
 #include <iostream>
 #include <algorithm>
+#include <cctype>
 #include <chrono>
 #include <ctime>
 
@@ -47,6 +48,27 @@ static std::string sha256Hex(const void* data, size_t len) {
         hex += buf;
     }
     return hex;
+}
+
+// Builds a Content-Disposition value the filename can't break out of: an ASCII
+// fallback with quotes, backslashes and control/non-ASCII bytes replaced, plus
+// the exact name percent-encoded in filename* (RFC 6266 / RFC 5987).
+static std::string contentDisposition(const std::string& filename) {
+    std::string fallback, encoded;
+    for (unsigned char c : filename) {
+        bool unsafe = c < 0x20 || c >= 0x7f || c == '"' || c == '\\';
+        fallback += unsafe ? '_' : static_cast<char>(c);
+
+        if (std::isalnum(c) || c == '.' || c == '-' || c == '_') {
+            encoded += static_cast<char>(c);
+        } else {
+            char buf[4];
+            snprintf(buf, sizeof(buf), "%%%02X", c);
+            encoded += buf;
+        }
+    }
+    if (fallback.empty()) fallback = encoded = "document.pdf";
+    return "attachment; filename=\"" + fallback + "\"; filename*=UTF-8''" + encoded;
 }
 
 // ─── AuthController ───────────────────────────────────────────────────────────
@@ -345,8 +367,7 @@ void DocumentController::download(const HttpRequestPtr& req,
     auto resp = HttpResponse::newHttpResponse();
     resp->setStatusCode(k200OK);
     resp->setContentTypeString("application/pdf");
-    resp->addHeader("Content-Disposition",
-                    "attachment; filename=\"" + doc->filename + "\"");
+    resp->addHeader("Content-Disposition", contentDisposition(doc->filename));
     resp->setBody(std::string(reinterpret_cast<const char*>(pdf_bytes.data()),
                               pdf_bytes.size()));
     cb(resp);

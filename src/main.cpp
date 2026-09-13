@@ -145,6 +145,20 @@ int main()
         {"CipherString", "DEFAULT:@SECLEVEL=0"},
     };
 
+    // Security headers on every response, static files included. The CSP blocks
+    // inline scripts and event handlers, so injected markup can't run code.
+    // Inline styles stay allowed because the pages use style attributes.
+    drogon::app().registerPreSendingAdvice(
+        [](const drogon::HttpRequestPtr&, const drogon::HttpResponsePtr& resp) {
+            resp->addHeader("Content-Security-Policy",
+                "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+                "img-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; "
+                "form-action 'self'; frame-ancestors 'none'");
+            resp->addHeader("X-Content-Type-Options", "nosniff");
+            resp->addHeader("X-Frame-Options", "DENY");
+            resp->addHeader("Referrer-Policy", "no-referrer");
+        });
+
     drogon::app()
         .setDocumentRoot("./static")
         .addListener("0.0.0.0", server_port, /*useSSL*/ true,

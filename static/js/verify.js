@@ -7,6 +7,15 @@ function toast(msg, type = 'success') {
   setTimeout(() => el.remove(), 3500);
 }
 
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 let selectedFile = null;
 
 function setFile(f) {
@@ -67,7 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
       result.className = 'verify-result invalid';
       result.innerHTML = `<div class="verify-icon"><img src="/assets/icons/warning.png" class="icon-img" alt="Error"></div>
         <div class="verify-label" style="color:var(--error)">Error</div>
-        <div class="verify-algo">${data.error || 'Verification failed'}</div>`;
+        <div class="verify-algo">${escHtml(data.error || 'Verification failed')}</div>`;
       return;
     }
 
@@ -76,13 +85,13 @@ document.addEventListener('DOMContentLoaded', () => {
       result.innerHTML = `
         <div class="verify-icon"><img src="/assets/icons/checkmark.png" class="icon-img" alt="Valid"></div>
         <div class="verify-label" style="color:var(--success)">Signature Valid</div>
-        <div class="verify-algo">${data.algorithm || 'ML-DSA-65'}</div>`;
+        <div class="verify-algo">${escHtml(data.algorithm || 'ML-DSA-65')}</div>`;
     } else {
       result.className = 'verify-result invalid';
       result.innerHTML = `
         <div class="verify-icon"><img src="/assets/icons/cross.png" class="icon-img" alt="Invalid"></div>
         <div class="verify-label" style="color:var(--error)">Invalid Signature</div>
-        <div class="verify-algo">${data.algorithm || 'ML-DSA-65'}</div>`;
+        <div class="verify-algo">${escHtml(data.algorithm || 'ML-DSA-65')}</div>`;
     }
   });
 });
