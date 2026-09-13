@@ -126,8 +126,10 @@ std::optional<std::string> AuthManager::verifyToken(const std::string& token) {
         return std::nullopt;
     }
 
-    // Confirm session still exists in Redis
-    if (!session_repo_.getKey(session_id)) {
+    // Confirm session still exists in Redis and belongs to the token's subject.
+    // Without the owner check, any live sid could be paired with a forged sub.
+    auto owner = session_repo_.getKey(session_id);
+    if (!owner || *owner != user_id) {
         return std::nullopt;
     }
 

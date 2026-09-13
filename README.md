@@ -1,5 +1,7 @@
 # PQC TLS 1.3 API
 
+
+
 A C++ REST API secured end-to-end with post-quantum cryptography:
 
 | Role            | Algorithm              | Library         |
@@ -12,26 +14,6 @@ A C++ REST API secured end-to-end with post-quantum cryptography:
 
 ---
 
-## Project Structure
-
-```
-pqc-api/
-├── include/
-│   ├── tls/         OQSProvider
-│   ├── crypto/      DilithiumSigner
-│   ├── pki/         Certificate, OCSPClient, RevocationChecker
-│   ├── persistence/ RedisClient, PostgreSQLClient, UserRepository, SessionRepository
-│   ├── auth/        AuthManager
-│   └── api/         Controllers
-├── src/             implementations
-├── scripts/
-│   ├── generate_certs.sh   one-time cert generation
-│   └── init.sql            PostgreSQL schema
-├── certs/           generated certificates (git-ignored except .crt)
-├── CMakeLists.txt
-├── Dockerfile
-└── docker-compose.yml
-```
 
 ---
 

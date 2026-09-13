@@ -82,8 +82,17 @@ int main()
     // Schema and the seed admin account (paulsiv) are created by
     // scripts/init.sql on first container start.
 
-    // Load JWT HMAC secret
-    std::string jwt_secret = env("JWT_SECRET", "change-me-in-production");
+    // Load JWT HMAC secret — no fallback: a known or short key lets anyone forge tokens
+    const char* jwt_secret_env = std::getenv("JWT_SECRET");
+    if (!jwt_secret_env) {
+        std::cerr << "[main] JWT_SECRET is not set. Aborting.\n";
+        return 1;
+    }
+    std::string jwt_secret(jwt_secret_env);
+    if (jwt_secret.size() < 32 || jwt_secret == "change-me-in-production") {
+        std::cerr << "[main] JWT_SECRET must be at least 32 bytes and not the placeholder. Aborting.\n";
+        return 1;
+    }
 
     // Build application layer
     AuthManager auth(jwt_secret, user_repo, session_repo);

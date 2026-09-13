@@ -31,6 +31,7 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - SERVER_PORT=8443
+      - JWT_SECRET=${JWT_SECRET:?set JWT_SECRET (>= 32 bytes) in the shell or .env}
     depends_on:
       postgres:
         condition: service_healthy
