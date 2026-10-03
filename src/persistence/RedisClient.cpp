@@ -23,6 +23,7 @@ RedisClient::~RedisClient() {
 }
 
 bool RedisClient::set(const std::string& key, const std::string& value, int ttl_seconds) {
+    std::lock_guard<std::mutex> lock(mtx_);
     redisReply* reply = static_cast<redisReply*>(
         redisCommand(ctx_, "SETEX %s %d %s",
                      key.c_str(), ttl_seconds, value.c_str()));
@@ -33,6 +34,7 @@ bool RedisClient::set(const std::string& key, const std::string& value, int ttl_
 }
 
 std::optional<std::string> RedisClient::get(const std::string& key) {
+    std::lock_guard<std::mutex> lock(mtx_);
     redisReply* reply = static_cast<redisReply*>(
         redisCommand(ctx_, "GET %s", key.c_str()));
     if (!reply) return std::nullopt;
@@ -46,6 +48,7 @@ std::optional<std::string> RedisClient::get(const std::string& key) {
 }
 
 bool RedisClient::del(const std::string& key) {
+    std::lock_guard<std::mutex> lock(mtx_);
     redisReply* reply = static_cast<redisReply*>(
         redisCommand(ctx_, "DEL %s", key.c_str()));
     if (!reply) return false;
@@ -55,6 +58,7 @@ bool RedisClient::del(const std::string& key) {
 }
 
 bool RedisClient::expire(const std::string& key, int ttl_seconds) {
+    std::lock_guard<std::mutex> lock(mtx_);
     redisReply* reply = static_cast<redisReply*>(
         redisCommand(ctx_, "EXPIRE %s %d", key.c_str(), ttl_seconds));
     if (!reply) return false;
@@ -64,6 +68,7 @@ bool RedisClient::expire(const std::string& key, int ttl_seconds) {
 }
 
 bool RedisClient::exists(const std::string& key) {
+    std::lock_guard<std::mutex> lock(mtx_);
     redisReply* reply = static_cast<redisReply*>(
         redisCommand(ctx_, "EXISTS %s", key.c_str()));
     if (!reply) return false;

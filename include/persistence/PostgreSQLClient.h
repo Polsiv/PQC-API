@@ -4,6 +4,7 @@
 #include <string>
 #include <optional>
 #include <functional>
+#include <mutex>
 
 /**
  * PostgreSQLClient
@@ -34,4 +35,7 @@ public:
 
 private:
     std::unique_ptr<pqxx::connection> conn_;
+    // A pqxx::connection allows one open transaction at a time and is not
+    // thread-safe; Drogon handlers run on several threads, so serialize access.
+    std::mutex mtx_;
 };

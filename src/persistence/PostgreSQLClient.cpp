@@ -21,6 +21,7 @@ bool PostgreSQLClient::isConnected() const {
 
 pqxx::result PostgreSQLClient::query(const std::string& sql,
                                       const std::vector<std::string>& params) {
+    std::lock_guard<std::mutex> lock(mtx_);
     pqxx::work txn(*conn_);
     pqxx::result result;
 
@@ -39,6 +40,7 @@ pqxx::result PostgreSQLClient::query(const std::string& sql,
 
 bool PostgreSQLClient::execute(const std::string& sql,
                                 const std::vector<std::string>& params) {
+    std::lock_guard<std::mutex> lock(mtx_);
     try {
         pqxx::work txn(*conn_);
         if (params.empty()) {
@@ -57,6 +59,7 @@ bool PostgreSQLClient::execute(const std::string& sql,
 }
 
 bool PostgreSQLClient::withTransaction(const std::function<void(pqxx::work&)>& fn) {
+    std::lock_guard<std::mutex> lock(mtx_);
     try {
         pqxx::work txn(*conn_);
         fn(txn);

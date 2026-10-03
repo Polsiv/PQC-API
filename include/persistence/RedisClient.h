@@ -3,6 +3,7 @@
 #include <hiredis/hiredis.h>
 #include <string>
 #include <optional>
+#include <mutex>
 
 /**
  * RedisClient
@@ -27,4 +28,7 @@ public:
 
 private:
     redisContext* ctx_;
+    // A redisContext is not thread-safe: concurrent commands interleave on the
+    // socket and read each other's replies. Serialize every command.
+    std::mutex mtx_;
 };
