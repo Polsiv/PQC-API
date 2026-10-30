@@ -299,6 +299,14 @@ void DocumentController::sign(const HttpRequestPtr& req, std::function<void(cons
     auto contentView = file.fileContent();   // returns std::string_view
     if (contentView.empty()) return cb(errorResponse("Empty file", k400BadRequest));
 
+    const std::string_view head = contentView.substr(0, 1024);
+    const std::string_view tail = contentView.size() > 1024
+        ? contentView.substr(contentView.size() - 1024) : contentView;
+    if (head.find("%PDF-") == std::string_view::npos ||
+        tail.find("%%EOF") == std::string_view::npos) {
+        return cb(errorResponse("Unsupported file type: only PDF documents can be signed", k415UnsupportedMediaType));
+    }
+
     std::string pdf_str(contentView.data(), contentView.size());
     std::string filename = file.getFileName();
     if (filename.empty()) filename = "document.pdf";
